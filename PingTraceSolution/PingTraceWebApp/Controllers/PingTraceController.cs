@@ -10,6 +10,13 @@ namespace PingTraceWebApp.Controllers
 {
     public class PingTraceController : Controller
     {
+        private readonly Services.ITracePingService _tracePingService;
+
+        public PingTraceController(Services.ITracePingService tracePingService)
+        {
+            _tracePingService = tracePingService;
+        }
+
         // GET: /<controller>/
         public IActionResult Index()
         {
@@ -17,17 +24,18 @@ namespace PingTraceWebApp.Controllers
         }
         public IActionResult Ping()
         {
-            return Content("Pong");
+            return Content(_tracePingService.Ping());
         }
 
         public IActionResult Trace(string destination)
         {
-            return Content("Trace");
+            
+            return Json(_tracePingService.Trace(destination));
         }
 
         public IActionResult Traces()
         {
-            return Content("Traces");
+            return Json(_tracePingService.Traces());
         }
     }
 }

@@ -86,6 +86,7 @@ namespace PingTraceWebApp
             // Register application services.
             services.AddTransient<IEmailSender, AuthMessageSender>();
             services.AddTransient<ISmsSender, AuthMessageSender>();
+            services.AddTransient<ITracePingService, TracePingService>();
         }
 
         // Configure is called after ConfigureServices is called.
