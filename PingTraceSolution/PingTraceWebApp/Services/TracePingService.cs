@@ -17,7 +17,7 @@ namespace PingTraceWebApp.Services
             var l = new List<Models.TraceResult>();
             l.Add(
                 new Models.TraceResult {
-                    Id = 1
+                    Id = "Foo.Web"
                     , Destination = "Foo"
                     , Identity = "Me"
                     , MachineName = "It"
@@ -35,7 +35,7 @@ namespace PingTraceWebApp.Services
 
             l.Add(
                 new Models.TraceDestination{
-                    Id = 1
+                    Id = "Foo.Web"
                     , Name = "Foo"
                     , ElapsedAverage = new TimeSpan(0,0,3)
                     , ElapsedMax = new TimeSpan(0,0,5)

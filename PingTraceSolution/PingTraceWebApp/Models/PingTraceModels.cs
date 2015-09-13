@@ -9,7 +9,7 @@ namespace PingTraceWebApp.Models
 {
     public class TraceDestination
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
         public string ExpectedIdentity { get; set; }
         public string ExpectedMachineName { get; set; }
@@ -22,7 +22,7 @@ namespace PingTraceWebApp.Models
 
     public class TraceResult
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public DateTime TimeStart { get; set; }
         public DateTime TimeEnd { get; set; }        
         public TimeSpan Elapsed { get { return TimeEnd - TimeStart; } }
