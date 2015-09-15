@@ -29,7 +29,6 @@ namespace PingTraceWebApp.Controllers
 
         public IActionResult Trace(string destination)
         {
-            
             return Json(_tracePingService.Trace(destination));
         }
 

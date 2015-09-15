@@ -9,41 +9,44 @@ namespace PingTraceWebApp.Services
     {
         public string Ping()
         {
+            
             return "Pong";
         }
 
-        public IList<Models.TraceResult> Trace(string destination)
+        public IList<Patware.PingTrace.Core.TraceResult> Trace(string destination)
         {
-            var l = new List<Models.TraceResult>();
+            var l = new List<Patware.PingTrace.Core.TraceResult>();
             l.Add(
-                new Models.TraceResult {
-                    Id = "Foo.Web"
-                    , Destination = "Foo"
-                    , Identity = "Me"
-                    , MachineName = "It"
-                    , TimeStart = DateTime.Now.AddSeconds(-5)
-                    , TimeEnd = DateTime.Now
-                    , Payload = "Pong"
+                new Patware.PingTrace.Core.TraceResult
+                {
+                    Id = "Foo.Web" ,
+                    Destination = "Foo",
+                    Identity = "Me",
+                    MachineName = "It",
+                    TimeStart = DateTime.Now.AddSeconds(-5),
+                    TimeEnd = DateTime.Now,
+                    Payload = "Pong"
                 });
 
             return l;
         }
 
-        public IList<Models.TraceDestination> Traces()
+        public IList<Patware.PingTrace.Core.TraceDestination> Traces()
         {
-            var l = new List<Models.TraceDestination>();
+            var l = new List<Patware.PingTrace.Core.TraceDestination>();
 
             l.Add(
-                new Models.TraceDestination{
-                    Id = "Foo.Web"
-                    , Name = "Foo"
-                    , ElapsedAverage = new TimeSpan(0,0,3)
-                    , ElapsedMax = new TimeSpan(0,0,5)
-                    , ExpectedIdentity = "Me"
-                    , ExpectedMachineName = "It"
-                    , PayloadDescription = "Ping"
-                    , PayloadRegex = "Pong"
-            });
+                new Patware.PingTrace.Core.TraceDestination
+                {
+                    Id = "Foo.Web",
+                    Name = "Foo",
+                    ElapsedAverage = new TimeSpan(0, 0, 3),
+                    ElapsedMax = new TimeSpan(0, 0, 5),
+                    ExpectedIdentity = "Me",
+                    ExpectedMachineName = "It",
+                    PayloadDescription = "Ping",
+                    PayloadRegex = "Pong"
+                });
 
             return l;
         }
@@ -52,8 +55,8 @@ namespace PingTraceWebApp.Services
     public interface ITracePingService
     {
         string Ping();
-        IList<Models.TraceResult> Trace(string destination);
-        IList<Models.TraceDestination> Traces();
+        IList<Patware.PingTrace.Core.TraceResult> Trace(string destination);
+        IList<Patware.PingTrace.Core.TraceDestination> Traces();
     }
 
 }
