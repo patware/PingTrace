@@ -10,9 +10,9 @@ namespace PingTraceWebApp.Controllers
 {
     public class PingTraceController : Controller
     {
-        private readonly Services.ITracePingService _tracePingService;
+        private readonly Patware.PingTrace.Core.ITracePingService _tracePingService;
 
-        public PingTraceController(Services.ITracePingService tracePingService)
+        public PingTraceController(Patware.PingTrace.Core.ITracePingService tracePingService)
         {
             _tracePingService = tracePingService;
         }

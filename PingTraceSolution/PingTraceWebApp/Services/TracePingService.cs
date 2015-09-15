@@ -5,11 +5,10 @@ using System.Threading.Tasks;
 
 namespace PingTraceWebApp.Services
 {
-    public class TracePingService : ITracePingService
+    public class TracePingService : Patware.PingTrace.Core.ITracePingService
     {
         public string Ping()
         {
-            
             return "Pong";
         }
 
@@ -52,11 +51,5 @@ namespace PingTraceWebApp.Services
         }
     }
 
-    public interface ITracePingService
-    {
-        string Ping();
-        IList<Patware.PingTrace.Core.TraceResult> Trace(string destination);
-        IList<Patware.PingTrace.Core.TraceDestination> Traces();
-    }
 
 }
