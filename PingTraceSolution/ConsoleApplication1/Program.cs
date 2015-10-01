@@ -10,7 +10,10 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
-            var tr = new Patware.PingTrace.Core.TraceResult { Id = "Test" };
+            var tr = new Patware.PingTrace.Core.TraceResult(new Guid("7D73DCA0-B771-40F4-9927-CE5470A23D1F"))
+            {
+                Name = "Console"
+            };
             
         }
     }

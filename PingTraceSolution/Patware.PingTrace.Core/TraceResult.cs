@@ -8,7 +8,11 @@ namespace Patware.PingTrace.Core
 {
     public class TraceResult
     {
-        public string Id { get; set; }
+        public TraceResult(Guid id)
+        {
+            this.Id = id;
+        }
+        public Guid Id { get; private set; }
         public string Name { get; set; }
         public string Identity { get; set; }
         public string MachineName { get; set; }
