@@ -7,7 +7,7 @@ using Patware.PingTrace.Core;
 
 namespace WebApplication1.Services
 {
-    public class PingTraceService : Patware.PingTrace.Core.ITracePingService
+    public class PingTraceService : Patware.PingTrace.Core.IPingTraceService
     {
         public string Ping()
         {

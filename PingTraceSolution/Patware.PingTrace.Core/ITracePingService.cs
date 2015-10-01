@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Patware.PingTrace.Core
 {
-    public interface ITracePingService
+    public interface IPingTraceService
     {
         string Ping();
         IList<Patware.PingTrace.Core.TraceResult> Trace(string destination);

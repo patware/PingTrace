@@ -8,7 +8,7 @@ namespace WebApplication1.Controllers
 {
     public class PingTraceController : Controller
     {
-        private Patware.PingTrace.Core.ITracePingService _tracePingService = new Services.PingTraceService();
+        private Patware.PingTrace.Core.IPingTraceService _tracePingService = new Services.PingTraceService();
         
         // GET: PingTrace
         public ActionResult Index()
