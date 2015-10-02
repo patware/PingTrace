@@ -10,6 +10,7 @@ namespace WebApplication1.Services
     public class PingTraceService : Patware.PingTrace.Core.IPingTraceService
     {
         private Guid _thisId = new Guid("{A110F236-5A01-440D-B5F1-12D8901642D3}");
+        private string _thisName = "WebApplication1";
 
         public string Ping()
         {
@@ -20,7 +21,8 @@ namespace WebApplication1.Services
         {
             var l = new List<TraceResult>();
 
-            var tr = new TraceResult(_thisId);
+            var tr = new TraceResult(id:_thisId);
+            tr.Name = _thisName;
             tr.Finish("Pong");
             l.Add(tr);
 
@@ -31,7 +33,8 @@ namespace WebApplication1.Services
         {
             var l = new List<TraceDestination>();
 
-            l.Add(new TraceDestination { Id = _thisId.ToString() });
+            
+            l.Add(new TraceDestination(id:_thisId, name:_thisName));
 
             return l;
         }
