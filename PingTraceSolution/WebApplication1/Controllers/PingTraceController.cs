@@ -8,6 +8,8 @@ namespace WebApplication1.Controllers
 {
     public class PingTraceController : Controller
     {
+        private Patware.PingTrace.Core.IPingTraceService _pingTraceService = new Services.PingTraceService();
+
         // GET: PingTrace
         public ActionResult Index()
         {
@@ -16,8 +18,17 @@ namespace WebApplication1.Controllers
 
         public ActionResult Ping()
         {
-            return Content("Pong");
+            return Content(_pingTraceService.Ping());
         }
 
+        public ActionResult Traces()
+        {
+            return Json(_pingTraceService.Traces(), JsonRequestBehavior.AllowGet);
+        }
+
+        public ActionResult Trace(string destination)
+        {
+            return Json(_pingTraceService.Trace(destination), JsonRequestBehavior.AllowGet);
+        }
     }
 }
