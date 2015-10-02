@@ -8,7 +8,12 @@ namespace Patware.PingTrace.Core
 {
     public class TraceDestination
     {
-        public string Id { get; set; }
+        public TraceDestination(Guid id, string name)
+        {
+            this.Id = id;
+            this.Name = name;
+        }
+        public Guid Id { get; set; }
         public string Name { get; set; }
         public string ExpectedIdentity { get; set; }
         public string ExpectedMachineName { get; set; }
