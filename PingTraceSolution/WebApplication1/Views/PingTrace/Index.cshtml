@@ -9,6 +9,10 @@
 <ul>
     <li>Ping: @Html.ActionLink("Ping","Ping")</li>
     <li>Traces: Fetch a list of known @Html.ActionLink("Traces","Traces")</li>
-    <li>Trace: Run a full @Html.ActionLink("Trace", "Trace")</li>
+    <li>Trace: <ul>
+        <li>Run a full @Html.ActionLink(linkText:"Trace",actionName: "Trace")</li>
+        <li>Same as above but with parameter @Html.ActionLink(linkText: "Trace", actionName: "Trace", routeValues: new { destination = "WebApplication1" })</li>
+        <li>Trace to WebService1 @Html.ActionLink(linkText: "Trace", actionName: "Trace", routeValues: new { destination = "WebService1" })</li>
+        </ul></li>
 </ul>
 

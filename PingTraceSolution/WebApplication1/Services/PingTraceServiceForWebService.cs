@@ -33,7 +33,12 @@ namespace WebApplication1.Services
         {
             var l = new List<TraceDestination>();
 
-            l.Add(new TraceDestination(id: _thisId, name: _thisName));
+            l.Add(new TraceDestination() {
+                Id = _thisId
+                , Name = _thisName
+                , ElapsedAverageSeconds = 2
+                , ElapsedMaxSeconds = 10
+            });
 
             return l;
         }

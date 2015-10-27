@@ -21,8 +21,8 @@ namespace Patware.PingTrace.Core
         public string Name { get; set; }
         public string ExpectedIdentity { get; set; }
         public string ExpectedMachineName { get; set; }
-        public TimeSpan ElapsedMax { get; set; }
-        public TimeSpan ElapsedAverage { get; set; }
+        public int ElapsedMaxSeconds { get; set; }
+        public int ElapsedAverageSeconds { get; set; }
         public string PayloadDescription { get; set; }
         public string PayloadRegex { get; set; }
     }

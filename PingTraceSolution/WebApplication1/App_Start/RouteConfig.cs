@@ -18,6 +18,13 @@ namespace WebApplication1
                 url: "{controller}/{action}/{id}",
                 defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
             );
+            
+            routes.MapRoute(
+                name: "PingTrace",
+                url: "PingTrace/{action}/{destination}",
+                defaults: new { controller = "PingTrace", action = "Index", destination = UrlParameter.Optional }
+            );
+
         }
     }
 }
