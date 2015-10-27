@@ -9,7 +9,7 @@ namespace Patware.PingTrace.Core
     public interface IPingTraceService
     {
         string Ping();
-        IList<Patware.PingTrace.Core.TraceResult> Trace(string destination);
-        IList<Patware.PingTrace.Core.TraceDestination> Traces();
+        List<Patware.PingTrace.Core.TraceResult> Trace(string destination);
+        List<Patware.PingTrace.Core.TraceDestination> Traces();
     }
 }

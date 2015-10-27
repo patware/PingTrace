@@ -7,7 +7,7 @@ using Patware.PingTrace.Core;
 
 namespace WebApplication1.Services
 {
-    public class PingTraceService : Patware.PingTrace.Core.IPingTraceService
+    public class PingTraceServiceForMvc : Patware.PingTrace.Core.IPingTraceService
     {
         private Guid _thisId = new Guid("{A110F236-5A01-440D-B5F1-12D8901642D3}");
         private string _thisName = "WebApplication1";
@@ -17,7 +17,7 @@ namespace WebApplication1.Services
             return "Pong";
         }
 
-        public IList<TraceResult> Trace(string destination)
+        public List<TraceResult> Trace(string destination)
         {
             var l = new List<TraceResult>();
 
@@ -29,11 +29,10 @@ namespace WebApplication1.Services
             return l;
         }
 
-        public IList<TraceDestination> Traces()
+        public List<TraceDestination> Traces()
         {
             var l = new List<TraceDestination>();
-
-            
+                        
             l.Add(new TraceDestination(id:_thisId, name:_thisName));
 
             return l;

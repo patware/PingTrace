@@ -8,6 +8,10 @@ namespace Patware.PingTrace.Core
 {
     public class TraceDestination
     {
+        public TraceDestination()
+        {
+            this.Id = Guid.NewGuid();
+        }
         public TraceDestination(Guid id, string name)
         {
             this.Id = id;

@@ -6,15 +6,20 @@ using System.Threading.Tasks;
 
 namespace Patware.PingTrace.Core
 {
+    
     public class TraceResult
     {
-        public TraceResult(Guid id)
+        public TraceResult()
         {
-            this.Id = id;
+            this.Id = Guid.NewGuid();
             this.StartedAt = DateTime.Now;
         }
+        public TraceResult(Guid id):this()
+        {
+            this.Id = id;
+        }
 
-        public Guid Id { get; private set; }
+        public Guid Id { get; set; }
         public string Name { get; set; }
         public string Identity { get; set; }
         public string MachineName { get; set; }
