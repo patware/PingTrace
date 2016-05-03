@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Patware.PingTrace.Core", "Patware.PingTrace.Core\Patware.PingTrace.Core.csproj", "{0C942059-0EFB-4E2A-AA4F-39A4728F2AB7}"
 EndProject
@@ -15,6 +15,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApplication1", "WebApplication1\WebApplication1.csproj", "{54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestApps", "TestApps", "{4E4AD55C-DD50-4C5F-A820-BE7977C50670}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Database1", "Database1\Database1.sqlproj", "{D410746A-7EE4-4525-937F-45F6C955A4DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +36,12 @@ Global
 		{54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D410746A-7EE4-4525-937F-45F6C955A4DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D410746A-7EE4-4525-937F-45F6C955A4DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D410746A-7EE4-4525-937F-45F6C955A4DE}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{D410746A-7EE4-4525-937F-45F6C955A4DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D410746A-7EE4-4525-937F-45F6C955A4DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D410746A-7EE4-4525-937F-45F6C955A4DE}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -41,5 +49,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{470DCB51-955E-4352-95E9-10601E4BC2EA} = {4E4AD55C-DD50-4C5F-A820-BE7977C50670}
 		{54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6} = {4E4AD55C-DD50-4C5F-A820-BE7977C50670}
+		{D410746A-7EE4-4525-937F-45F6C955A4DE} = {4E4AD55C-DD50-4C5F-A820-BE7977C50670}
 	EndGlobalSection
 EndGlobal

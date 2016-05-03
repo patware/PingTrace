@@ -26,7 +26,7 @@ namespace WebApplication1.Services
             tr.Finish(string.Format("Pong [{0}]", destination));
             l.Add(tr);
 
-            if (!string.IsNullOrEmpty(destination) && destination.ToUpper() !=  _thisName.ToUpper())
+            if (!string.IsNullOrEmpty(destination) && destination.ToLowerInvariant() !=  _thisName.ToLowerInvariant())
             {
                 var mws = new MyWebService1.WebService1SoapClient();
                 var res = mws.Trace(destination);

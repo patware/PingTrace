@@ -9,8 +9,11 @@ namespace WebApplication1.Services
 {
     public class PingTraceServiceForWebService : Patware.PingTrace.Core.IPingTraceService
     {
-        private Guid _thisId = new Guid("{32DE64E4-6FB4-4F8B-A2C5-C42BF1313141}");
-        private string _thisName = "WebService1";
+
+        private readonly Data.IRepository _repo = new Data.Repository();
+
+        private readonly Guid _thisId = new Guid("{32DE64E4-6FB4-4F8B-A2C5-C42BF1313141}");
+        private readonly string _thisName = "WebService1";
 
         public string Ping()
         {
@@ -26,6 +29,13 @@ namespace WebApplication1.Services
             tr.Finish("Pong");
             l.Add(tr);
 
+            switch(destination.ToLowerInvariant())
+            {
+                case "database1":
+                    l.Add(_repo.RunTrace(destination));
+                    break;
+            }
+            
             return l;
         }
 
@@ -40,6 +50,7 @@ namespace WebApplication1.Services
                 , ElapsedMaxSeconds = 10
             });
 
+            l.AddRange(_repo.RunTraces());
             return l;
         }
     }
