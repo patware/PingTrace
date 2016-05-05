@@ -9,8 +9,8 @@ namespace WebApplication1.Services
 {
     public class PingTraceServiceForMvc : Patware.PingTrace.Core.IPingTraceService
     {
-        private Guid _thisId = new Guid("{A110F236-5A01-440D-B5F1-12D8901642D3}");
-        private string _thisName = "WebApplication1";
+        private readonly Guid _thisId = new Guid("{A110F236-5A01-440D-B5F1-12D8901642D3}");
+        private readonly string _thisName = "WebApplication1";
         
         public string Ping()
         {
@@ -23,7 +23,9 @@ namespace WebApplication1.Services
 
             var tr = new TraceResult(id: _thisId);
             tr.Name = _thisName;
-            tr.Finish(string.Format("Pong [{0}]", destination));
+            tr.MachineName = System.Environment.MachineName;
+            tr.Identity = System.Environment.UserDomainName;
+            
             l.Add(tr);
 
             if (!string.IsNullOrEmpty(destination) && destination.ToLowerInvariant() !=  _thisName.ToLowerInvariant())
@@ -43,14 +45,22 @@ namespace WebApplication1.Services
                 }
             }
 
+            tr.Finish(string.Format("Pong [{0}]", destination));
+
             return l;
         }
 
         public List<TraceDestination> Traces()
         {
             var l = new List<TraceDestination>();
-                        
-            l.Add(new TraceDestination(id:_thisId, name:_thisName));
+            var td = new TraceDestination(id: _thisId, name: _thisName);
+            td.ElapsedAverageSeconds = 1;
+            td.ElapsedMaxSeconds = 1;
+            td.ExpectedIdentity = "AppPoolNameRunningTheWebSite";
+            td.ExpectedMachineName = "MachineNameRunningTheWebSite";
+            td.PayloadDescription = "Just the string Pong";
+            td.PayloadRegex = "Pong";
+            l.Add(td);
             
             var mws = new MyWebService1.WebService1SoapClient();
             var traces = mws.Traces();

@@ -26,7 +26,9 @@ namespace WebApplication1.Services
 
             var tr = new TraceResult(id: _thisId);
             tr.Name = _thisName;
-            tr.Finish("Pong");
+            tr.MachineName = System.Environment.MachineName;
+            tr.Identity = System.Environment.UserDomainName;
+            
             l.Add(tr);
 
             switch(destination.ToLowerInvariant())
@@ -35,7 +37,9 @@ namespace WebApplication1.Services
                     l.Add(_repo.RunTrace(destination));
                     break;
             }
-            
+
+            tr.Finish("Pong");
+
             return l;
         }
 
@@ -46,8 +50,12 @@ namespace WebApplication1.Services
             l.Add(new TraceDestination() {
                 Id = _thisId
                 , Name = _thisName
-                , ElapsedAverageSeconds = 2
-                , ElapsedMaxSeconds = 10
+                ,ElapsedAverageSeconds = 1
+                ,ElapsedMaxSeconds = 1
+                ,ExpectedIdentity = "AppPoolNameRunningTheWebSite"
+                ,ExpectedMachineName = "MachineNameRunningTheWebSite"
+                ,PayloadDescription = "Just the string Pong"
+                ,PayloadRegex = "Pong"                
             });
 
             l.AddRange(_repo.RunTraces());

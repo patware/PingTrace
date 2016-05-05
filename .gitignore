@@ -45,3 +45,4 @@ Temporary Items
 *.suo
 PingTraceSolution/WebApplication1/obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
 *.suo
+/PingTraceSolution/Database1/Database1.dbmdl

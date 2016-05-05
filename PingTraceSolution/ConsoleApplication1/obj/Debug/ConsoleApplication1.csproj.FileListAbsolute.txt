@@ -6,3 +6,5 @@ D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\ConsoleApplication1\bin\Debug\
 D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\ConsoleApplication1\obj\Debug\ConsoleApplication1.csprojResolveAssemblyReference.cache
 D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\ConsoleApplication1\obj\Debug\ConsoleApplication1.exe
 D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\ConsoleApplication1\obj\Debug\ConsoleApplication1.pdb
+D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\ConsoleApplication1\bin\Debug\Newtonsoft.Json.dll
+D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\ConsoleApplication1\bin\Debug\Newtonsoft.Json.xml
