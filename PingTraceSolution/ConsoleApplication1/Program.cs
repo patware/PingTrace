@@ -39,13 +39,14 @@ namespace ConsoleApplication1
                 {
                     Console.Write("\t");
                     Console.WriteLine(traceResult.Name);
-                    Console.WriteLine("\tExpected Time: (max/avg) ({0}/{1}, actual: {2})", traceDestination.ElapsedMaxSeconds, traceDestination.ElapsedAverageSeconds, traceResult.Elapsed.TotalSeconds);
+                    Console.WriteLine("\tExpected Time: (max/avg) ({0}/{1}, actual: {2})", traceDestination.ExpectedElapsedMilisecondsMax, traceDestination.ExpectedElapsedMilisecondsAverage, traceResult.Elapsed.TotalSeconds);
                     Console.WriteLine("\tExpected Identity: {0} actual: {1}", traceDestination.ExpectedIdentity, traceResult.Identity);
-                    Console.WriteLine("\tExpected MachineName: {0} actual: {1}", traceDestination.ExpectedMachineName, traceResult.MachineName);
+                    Console.WriteLine("\tExpected MachineName: {0} actual: {1}", string.Join(",", traceDestination.ExpectedMachineNames), traceResult.MachineName);
 
                     Console.WriteLine("\tPayload Description: {0}", traceDestination.PayloadDescription);
                     Console.WriteLine("\tPayload: {0}", traceResult.Payload);
                     Console.WriteLine();
+                                        
                 }
             }
 

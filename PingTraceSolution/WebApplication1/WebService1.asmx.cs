@@ -16,7 +16,7 @@ namespace WebApplication1
     // [System.Web.Script.Services.ScriptService]
     public class WebService1 : System.Web.Services.WebService
     {
-        private Patware.PingTrace.Core.IPingTraceService _pingService = new Services.PingTraceServiceForWebService();
+        private readonly Patware.PingTrace.Core.IPingTraceService _pingService = new Services.PingTraceServiceForWebService();
 
         [WebMethod]
         public string Ping()

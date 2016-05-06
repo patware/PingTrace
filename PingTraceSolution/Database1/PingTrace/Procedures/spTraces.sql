@@ -10,9 +10,9 @@ AS
         [Id] = @Id,
         [Name] = @Name,
         [ExpectedIdentity] = null,
-        [ExpectedMachineName] = 'SIAD049W\SQLEXPRESS',
-        [ElapsedMaxSeconds] = 1,
-        [ElapsedAverageSeconds] = 1,
-        [PayloadDescription] = 'Pong',
+        [ExpectedMachineName] = '$(ExpectedIdentity)',
+        [ExpectedElapsedMilisecondsMax] = 1000,
+        [ExpectedElapsedMilisecondsAverage] = 250,
+        [PayloadDescription] = 'Just the string Pong',
         [PayloadRegex] = 'Pong'
 RETURN 0

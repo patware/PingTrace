@@ -22,11 +22,17 @@ namespace Patware.PingTrace.Core
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string Identity { get; set; }
+        /// <summary>
+        /// Make use of the <see cref="System.Environment.MachineName"/>
+        /// </summary>
         public string MachineName { get; set; }
         public DateTime StartedAt { get; set; }
+        /// <summary>
+        /// Use the <see cref="Finish(string)"/> method set this.  Preferrably, call it when the "child" traces have been called.
+        /// </summary>
         public DateTime FinishedAt { get; set; }
         public string Payload { get; set; }
-          public void Finish(string payload)
+        public void Finish(string payload)
         {
             this.Payload = payload;
             this.FinishedAt = DateTime.Now;            

@@ -169,11 +169,11 @@ namespace WebApplication1.MyWebService1 {
         private string ExpectedIdentityField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private string ExpectedMachineNameField;
+        private WebApplication1.MyWebService1.ArrayOfString ExpectedMachineNamesField;
         
-        private int ElapsedMaxSecondsField;
+        private int ExpectedElapsedMilisecondsMaxField;
         
-        private int ElapsedAverageSecondsField;
+        private int ExpectedElapsedMilisecondsAverageField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private string PayloadDescriptionField;
@@ -231,40 +231,40 @@ namespace WebApplication1.MyWebService1 {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute(EmitDefaultValue=false, Order=3)]
-        public string ExpectedMachineName {
+        public WebApplication1.MyWebService1.ArrayOfString ExpectedMachineNames {
             get {
-                return this.ExpectedMachineNameField;
+                return this.ExpectedMachineNamesField;
             }
             set {
-                if ((object.ReferenceEquals(this.ExpectedMachineNameField, value) != true)) {
-                    this.ExpectedMachineNameField = value;
-                    this.RaisePropertyChanged("ExpectedMachineName");
+                if ((object.ReferenceEquals(this.ExpectedMachineNamesField, value) != true)) {
+                    this.ExpectedMachineNamesField = value;
+                    this.RaisePropertyChanged("ExpectedMachineNames");
                 }
             }
         }
         
         [System.Runtime.Serialization.DataMemberAttribute(IsRequired=true, Order=4)]
-        public int ElapsedMaxSeconds {
+        public int ExpectedElapsedMilisecondsMax {
             get {
-                return this.ElapsedMaxSecondsField;
+                return this.ExpectedElapsedMilisecondsMaxField;
             }
             set {
-                if ((this.ElapsedMaxSecondsField.Equals(value) != true)) {
-                    this.ElapsedMaxSecondsField = value;
-                    this.RaisePropertyChanged("ElapsedMaxSeconds");
+                if ((this.ExpectedElapsedMilisecondsMaxField.Equals(value) != true)) {
+                    this.ExpectedElapsedMilisecondsMaxField = value;
+                    this.RaisePropertyChanged("ExpectedElapsedMilisecondsMax");
                 }
             }
         }
         
         [System.Runtime.Serialization.DataMemberAttribute(IsRequired=true, Order=5)]
-        public int ElapsedAverageSeconds {
+        public int ExpectedElapsedMilisecondsAverage {
             get {
-                return this.ElapsedAverageSecondsField;
+                return this.ExpectedElapsedMilisecondsAverageField;
             }
             set {
-                if ((this.ElapsedAverageSecondsField.Equals(value) != true)) {
-                    this.ElapsedAverageSecondsField = value;
-                    this.RaisePropertyChanged("ElapsedAverageSeconds");
+                if ((this.ExpectedElapsedMilisecondsAverageField.Equals(value) != true)) {
+                    this.ExpectedElapsedMilisecondsAverageField = value;
+                    this.RaisePropertyChanged("ExpectedElapsedMilisecondsAverage");
                 }
             }
         }
@@ -303,6 +303,13 @@ namespace WebApplication1.MyWebService1 {
                 propertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
             }
         }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Runtime.Serialization", "4.0.0.0")]
+    [System.Runtime.Serialization.CollectionDataContractAttribute(Name="ArrayOfString", Namespace="http://tempuri.org/", ItemName="string")]
+    [System.SerializableAttribute()]
+    public class ArrayOfString : System.Collections.Generic.List<string> {
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]

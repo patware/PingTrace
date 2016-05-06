@@ -22,5 +22,41 @@ namespace WebApplication1.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Foo")]
+        public string ExpectedIdentityMvc {
+            get {
+                return ((string)(this["ExpectedIdentityMvc"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Bar")]
+        public string ExpectedMachineNameMvc {
+            get {
+                return ((string)(this["ExpectedMachineNameMvc"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("A")]
+        public string ExpectedIdentityWebService {
+            get {
+                return ((string)(this["ExpectedIdentityWebService"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("B")]
+        public string ExpectedMachineNameWebService {
+            get {
+                return ((string)(this["ExpectedMachineNameWebService"]));
+            }
+        }
     }
 }

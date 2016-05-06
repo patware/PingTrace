@@ -71,4 +71,10 @@
   <ItemGroup>
     <RefactorLog Include="Database1.refactorlog" />
   </ItemGroup>
+  <ItemGroup>
+    <SqlCmdVariable Include="ExpectedIdentity">
+      <DefaultValue>PleaseEnterValueDuringDeployment</DefaultValue>
+      <Value>$(SqlCmdVar__1)</Value>
+    </SqlCmdVariable>
+  </ItemGroup>
 </Project>

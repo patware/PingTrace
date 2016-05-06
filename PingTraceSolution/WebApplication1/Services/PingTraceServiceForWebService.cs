@@ -50,10 +50,10 @@ namespace WebApplication1.Services
             l.Add(new TraceDestination() {
                 Id = _thisId
                 , Name = _thisName
-                ,ElapsedAverageSeconds = 1
-                ,ElapsedMaxSeconds = 1
-                ,ExpectedIdentity = "AppPoolNameRunningTheWebSite"
-                ,ExpectedMachineName = "MachineNameRunningTheWebSite"
+                ,ExpectedElapsedMilisecondsAverage = 1
+                ,ExpectedElapsedMilisecondsMax = 1
+                ,ExpectedIdentity = Properties.Settings.Default.ExpectedIdentityWebService
+                ,ExpectedMachineNames = new[] { Properties.Settings.Default.ExpectedMachineNameWebService }
                 ,PayloadDescription = "Just the string Pong"
                 ,PayloadRegex = "Pong"                
             });

@@ -54,28 +54,28 @@ namespace WebApplication1.Services
         {
             var l = new List<TraceDestination>();
             var td = new TraceDestination(id: _thisId, name: _thisName);
-            td.ElapsedAverageSeconds = 1;
-            td.ElapsedMaxSeconds = 1;
-            td.ExpectedIdentity = "AppPoolNameRunningTheWebSite";
-            td.ExpectedMachineName = "MachineNameRunningTheWebSite";
-            td.PayloadDescription = "Just the string Pong";
-            td.PayloadRegex = "Pong";
+            td.ExpectedElapsedMilisecondsAverage = 1;
+            td.ExpectedElapsedMilisecondsMax = 1;
+            td.ExpectedIdentity = Properties.Settings.Default.ExpectedIdentityMvc;
+            td.ExpectedMachineNames = new[] { Properties.Settings.Default.ExpectedMachineNameMvc };
+            td.PayloadDescription = "Pong and the destination in square brackets";
+            td.PayloadRegex = "Pong \\[.*\\]";
             l.Add(td);
             
             var mws = new MyWebService1.WebService1SoapClient();
             var traces = mws.Traces();
 
-            foreach(var trace in traces)
+            foreach(var traceDestination in traces)
             {
                 l.Add(new TraceDestination() {
-                    Id = trace.Id
-                    , Name = trace.Name
-                    , ElapsedAverageSeconds = trace.ElapsedAverageSeconds
-                    , ElapsedMaxSeconds = trace.ElapsedMaxSeconds
-                    , ExpectedIdentity = trace.ExpectedIdentity
-                    , ExpectedMachineName = trace.ExpectedMachineName
-                    , PayloadDescription = trace.PayloadDescription
-                    , PayloadRegex = trace.PayloadRegex
+                    Id = traceDestination.Id
+                    , Name = traceDestination.Name
+                    , ExpectedElapsedMilisecondsAverage = traceDestination.ExpectedElapsedMilisecondsAverage
+                    , ExpectedElapsedMilisecondsMax = traceDestination.ExpectedElapsedMilisecondsMax
+                    , ExpectedIdentity = traceDestination.ExpectedIdentity
+                    , ExpectedMachineNames = traceDestination.ExpectedMachineNames.ToArray()
+                    , PayloadDescription = traceDestination.PayloadDescription
+                    , PayloadRegex = traceDestination.PayloadRegex
                 });
             }
 

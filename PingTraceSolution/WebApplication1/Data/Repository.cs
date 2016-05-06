@@ -51,9 +51,9 @@ namespace WebApplication1.Data
                 td.Id = res.GetGuid(0);
                 td.Name = res.GetString(1);
                 td.ExpectedIdentity = res.IsDBNull(2) ? string.Empty : res.GetString(2);
-                td.ExpectedMachineName = res.GetString(3);
-                td.ElapsedMaxSeconds = res.GetInt32(4);
-                td.ElapsedAverageSeconds = res.GetInt32(5);
+                td.ExpectedMachineNames = new[] { res.GetString(3) };
+                td.ExpectedElapsedMilisecondsMax = res.GetInt32(4);
+                td.ExpectedElapsedMilisecondsAverage = res.GetInt32(5);
                 td.PayloadDescription = res.GetString(6);
                 td.PayloadRegex = res.GetString(7);
 
