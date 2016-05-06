@@ -6,8 +6,7 @@ AS
 	DECLARE @Name varchar(50) = 'Database1'
 	DECLARE @StartedAt datetime = getdate()
 	DECLARE @FinishedAt datetime
-	DECLARE @Payload varchar(50) = 'Pong'
-
+	
 	INSERT INTO 
 		PingTrace.PingTraceHistory 
 		(
@@ -28,6 +27,6 @@ AS
 			[MachineName] = @@SERVERNAME,
 			[StartedAt] = @StartedAt,
 			[FinishedAt] = @FinishedAt,
-			[Payload] = @Payload
+			[Payload] = 'Pong [' + DB_NAME() + ']'
         
 RETURN 0

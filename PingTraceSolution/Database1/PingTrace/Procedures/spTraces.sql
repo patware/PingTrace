@@ -13,6 +13,6 @@ AS
         [ExpectedMachineName] = '$(ExpectedIdentity)',
         [ExpectedElapsedMilisecondsMax] = 1000,
         [ExpectedElapsedMilisecondsAverage] = 250,
-        [PayloadDescription] = 'Just the string Pong',
-        [PayloadRegex] = 'Pong'
+        [PayloadDescription] = 'Pong plus the name of the database in square brackets',
+        [PayloadRegex] = 'Pong \[.*\]'
 RETURN 0

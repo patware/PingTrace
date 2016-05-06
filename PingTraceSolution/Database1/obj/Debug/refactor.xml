@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Operations Version="1.0">
+  <Operation Name="Move Schema" Key="dca7f861-ff50-4e92-9dd7-ec835892cc7c" ChangeDateTime="05/02/2016 13:20:35" xmlns="http://schemas.microsoft.com/sqlserver/dac/Serialization/2012/02">
+    <Property Name="ElementName" Value="[dbo].[PingTrace]" />
+    <Property Name="ElementType" Value="SqlTable" />
+    <Property Name="NewSchema" Value="PingTrace" />
+    <Property Name="IsNewSchemaExternal" Value="False" />
+  </Operation>
+  <Operation Name="Move Schema" Key="35877d29-1f48-45e7-a740-b84b8affb524" ChangeDateTime="05/02/2016 13:22:27" xmlns="http://schemas.microsoft.com/sqlserver/dac/Serialization/2012/02">
+    <Property Name="ElementName" Value="[dbo].[spPing]" />
+    <Property Name="ElementType" Value="SqlProcedure" />
+    <Property Name="NewSchema" Value="PingTrace" />
+    <Property Name="IsNewSchemaExternal" Value="False" />
+  </Operation>
+</Operations>
