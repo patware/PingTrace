@@ -23,10 +23,8 @@ AS
 	SELECT 	        
 	        [Id] = @Id,
 			[Name] = @Name,
-			[Identity] = CURRENT_USER,
+			[Identity] = SYSTEM_USER,
 			[MachineName] = @@SERVERNAME,
-			[StartedAt] = @StartedAt,
-			[FinishedAt] = @FinishedAt,
 			[Payload] = 'Pong [' + DB_NAME() + ']'
         
 RETURN 0

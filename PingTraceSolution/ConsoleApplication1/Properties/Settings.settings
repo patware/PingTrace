@@ -1,0 +1,42 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="ConsoleApplication1.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="MvcExpectedIdentity" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">A (Change this in app.config)</Value>
+    </Setting>
+    <Setting Name="MvcExpectedMachineName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">B (Change this in app.config)</Value>
+    </Setting>
+    <Setting Name="MvcExpectedElapsedMsMax" Type="System.UInt32" Scope="Application">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="MvcExpectedElapsedMsAvg" Type="System.UInt32" Scope="Application">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+    <Setting Name="WsExpectedIdentity" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C (Change this in app.config)</Value>
+    </Setting>
+    <Setting Name="WsExpectedMachineName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">D (Change this in app.config)</Value>
+    </Setting>
+    <Setting Name="WsExpectedElapsedMsMax" Type="System.UInt32" Scope="Application">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="WsExpectedElapsedMsAvg" Type="System.UInt32" Scope="Application">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+    <Setting Name="DbExpectedIdentity" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">E (Change this in app.config)</Value>
+    </Setting>
+    <Setting Name="DbExpectedMachineName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">F (Change this in app.config)</Value>
+    </Setting>
+    <Setting Name="DbExpectedElapsedMsMax" Type="System.UInt32" Scope="Application">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="DbExpectedElapsedMsAvg" Type="System.UInt32" Scope="Application">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

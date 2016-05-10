@@ -3,7 +3,3 @@ D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\bin\Debug\Database1.
 D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\bin\Debug\Database1.pdb
 D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\obj\Debug\Database1.dll
 D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\obj\Debug\Database1.pdb
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\obj\Debug\Model.xml
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\obj\Debug\refactor.xml
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\obj\Debug\postdeploy.sql
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Database1\obj\Debug\predeploy.sql

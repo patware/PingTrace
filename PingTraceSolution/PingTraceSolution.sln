@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Patware.PingTrace.Core", "Patware.PingTrace.Core\Patware.PingTrace.Core.csproj", "{0C942059-0EFB-4E2A-AA4F-39A4728F2AB7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.csproj", "{470DCB51-955E-4352-95E9-10601E4BC2EA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6} = {54D6F5EF-5D6A-4D2D-83CF-A9F4ABE75FE6}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A86A8B9B-C497-45FF-BD00-EE82B021362A}"
 	ProjectSection(SolutionItems) = preProject

@@ -65,7 +65,9 @@ namespace WebApplication1.Data
 
         public Patware.PingTrace.Core.TraceResult RunTrace(string destination)
         {
-            
+
+            var ret = new Patware.PingTrace.Core.TraceResult();
+
             var connext = new System.Data.SqlClient.SqlConnection(ConfigurationManager.ConnectionStrings["Database1"].ConnectionString);
 
             var cmd = new System.Data.SqlClient.SqlCommand("[PingTrace].[spTrace]", connext);
@@ -76,15 +78,13 @@ namespace WebApplication1.Data
 
             if (res.Read())
             {
-                var ret = new Patware.PingTrace.Core.TraceResult();
                 
                 ret.Id = res.GetGuid(0);
                 ret.Name = res.GetString(1);
                 ret.Identity = res.GetString(2);
                 ret.MachineName = res.GetString(3);
-                ret.StartedAt = res.GetDateTime(4);
-                ret.FinishedAt = res.GetDateTime(5);
-                ret.Payload = res.GetString(6);
+
+                ret.Finish(res.GetString(4));
 
                 return ret;
             }

@@ -38,7 +38,7 @@ namespace WebApplication1.Services
                     break;
             }
 
-            tr.Finish("Pong");
+            tr.Finish(string.Format("Pong [{0}]", destination));
 
             return l;
         }
@@ -54,9 +54,9 @@ namespace WebApplication1.Services
                 ,ExpectedElapsedMilisecondsMax = 1
                 ,ExpectedIdentity = Properties.Settings.Default.ExpectedIdentityWebService
                 ,ExpectedMachineNames = new[] { Properties.Settings.Default.ExpectedMachineNameWebService }
-                ,PayloadDescription = "Just the string Pong"
-                ,PayloadRegex = "Pong"                
-            });
+                ,PayloadDescription = "Pong and the destination in square brackets"
+                ,PayloadRegex = "Pong \\[.*\\]"
+        });
 
             l.AddRange(_repo.RunTraces());
             return l;
