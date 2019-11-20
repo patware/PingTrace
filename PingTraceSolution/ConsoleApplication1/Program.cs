@@ -12,6 +12,8 @@ namespace ConsoleApplication1
         {
             Discover();
             TraceAndReportOnDatabase();
+            Console.WriteLine("Finished... press enter");
+            Console.ReadLine();
         }
         
         private static void Discover()

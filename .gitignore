@@ -17,6 +17,13 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Bb]in/
+[Oo]bj/
+
 # =========================
 # Operating System Files
 # =========================
@@ -42,7 +49,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 *.suo
-*.suo
-PingTraceSolution/WebApplication1/obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
-*.suo
 /PingTraceSolution/Database1/Database1.dbmdl
+.vs
