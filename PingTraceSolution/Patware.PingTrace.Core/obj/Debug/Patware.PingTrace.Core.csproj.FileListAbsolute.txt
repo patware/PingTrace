@@ -1,5 +1,0 @@
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Patware.PingTrace.Core\bin\Debug\Patware.PingTrace.Core.dll
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Patware.PingTrace.Core\bin\Debug\Patware.PingTrace.Core.pdb
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Patware.PingTrace.Core\obj\Debug\Patware.PingTrace.Core.csprojResolveAssemblyReference.cache
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Patware.PingTrace.Core\obj\Debug\Patware.PingTrace.Core.dll
-D:\dev\GitHub\Patware\PingTrace\PingTraceSolution\Patware.PingTrace.Core\obj\Debug\Patware.PingTrace.Core.pdb
