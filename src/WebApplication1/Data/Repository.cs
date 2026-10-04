@@ -1,97 +1,97 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Configuration;
+﻿using Microsoft.Data.SqlClient;
+using Patware.PingTrace.Core;
+using System.Data;
 
 namespace WebApplication1.Data
 {
-    public class Repository : IRepository
+  public sealed class Repository : IRepository
+  {
+    private readonly string _connectionString;
+
+    public Repository(IConfiguration configuration)
     {
-        public string RunPing()
-        {
-            var connext = new System.Data.SqlClient.SqlConnection(ConfigurationManager.ConnectionStrings["Database1"].ConnectionString);
-
-            var cmd = new System.Data.SqlClient.SqlCommand("[PingTrace].[spPing]", connext);
-            cmd.CommandType = System.Data.CommandType.StoredProcedure;
-            connext.Open();
-            var res = cmd.ExecuteReader();
-
-            if (res.Read())
-            {
-                return res.GetString(0);
-            }
-            else
-            {
-                return string.Empty;
-            }
-
-        }
-
-        public IList<Patware.PingTrace.Core.TraceDestination> RunTraces()
-        {
-            var connext = new System.Data.SqlClient.SqlConnection(ConfigurationManager.ConnectionStrings["Database1"].ConnectionString);
-
-            var cmd = new System.Data.SqlClient.SqlCommand("[PingTrace].[spTraces]", connext);
-            cmd.CommandType = System.Data.CommandType.StoredProcedure;
-            connext.Open();
-            var res = cmd.ExecuteReader();
-
-            var l = new List<Patware.PingTrace.Core.TraceDestination>();
-
-            while (res.Read())
-            {
-                /*
-                 * 0                                    1           2                   3                   4                   5                       6                   7           
-                 * Id	                                Name	    ExpectedIdentity	ExpectedMachineName	ElapsedMaxSeconds	ElapsedAverageSeconds	PayloadDescription	PayloadRegex
-                 * 188712E4-4E7E-417E-8C91-D9115BC0BE22	Database1	NULL	            SIAD049W\SQLEXPRESS	1	                1	                    Pong	            Pong
-                 * 
-                 */
-                var td = new Patware.PingTrace.Core.TraceDestination();
-                td.Id = res.GetGuid(0);
-                td.Name = res.GetString(1);
-                td.ExpectedIdentity = res.IsDBNull(2) ? string.Empty : res.GetString(2);
-                td.ExpectedMachineNames = new[] { res.GetString(3) };
-                td.ExpectedElapsedMilisecondsMax = res.GetInt32(4);
-                td.ExpectedElapsedMilisecondsAverage = res.GetInt32(5);
-                td.PayloadDescription = res.GetString(6);
-                td.PayloadRegex = res.GetString(7);
-
-                l.Add(td);
-            }
-
-            return l;
-        }
-
-        public Patware.PingTrace.Core.TraceResult RunTrace(string destination)
-        {
-
-            var ret = new Patware.PingTrace.Core.TraceResult();
-
-            var connext = new System.Data.SqlClient.SqlConnection(ConfigurationManager.ConnectionStrings["Database1"].ConnectionString);
-
-            var cmd = new System.Data.SqlClient.SqlCommand("[PingTrace].[spTrace]", connext);
-            cmd.Parameters.AddWithValue("@destination", destination);
-            cmd.CommandType = System.Data.CommandType.StoredProcedure;
-            connext.Open();
-            var res = cmd.ExecuteReader();
-
-            if (res.Read())
-            {
-                
-                ret.Id = res.GetGuid(0);
-                ret.Name = res.GetString(1);
-                ret.Identity = res.GetString(2);
-                ret.MachineName = res.GetString(3);
-
-                ret.Finish(res.GetString(4));
-
-                return ret;
-            }
-            
-            return null;
-            
-
-        }
+      _connectionString = configuration.GetConnectionString("Database1")
+        ?? throw new InvalidOperationException(
+          "ConnectionStrings:Database1 is not configured.");
     }
+
+    public string RunPing()
+    {
+      using SqlConnection connection = new SqlConnection(_connectionString);
+      using SqlCommand command =
+        new SqlCommand("[PingTrace].[spPing]", connection)
+        {
+          CommandType = CommandType.StoredProcedure
+        };
+
+      connection.Open();
+      return command.ExecuteScalar() as string ?? string.Empty;
+    }
+
+    public IList<TraceDestination> RunTraces()
+    {
+      using SqlConnection connection = new SqlConnection(_connectionString);
+      using SqlCommand command =
+        new SqlCommand("[PingTrace].[spTraces]", connection)
+        {
+          CommandType = CommandType.StoredProcedure
+        };
+
+      connection.Open();
+      using SqlDataReader reader = command.ExecuteReader();
+
+      List<TraceDestination> destinations = new List<TraceDestination>();
+
+      while (reader.Read())
+      {
+        destinations.Add(new TraceDestination(
+          reader.GetGuid(0), reader.GetString(1))
+        {
+          ExpectedIdentity = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+          ExpectedMachineNames = new[] { reader.GetString(3) },
+          ExpectedElapsedMilisecondsMax = reader.GetInt32(4),
+          ExpectedElapsedMilisecondsAverage = reader.GetInt32(5),
+          PayloadDescription = reader.GetString(6),
+          PayloadRegex = reader.GetString(7)
+        });
+      }
+
+      return destinations;
+    }
+
+    public TraceResult RunTrace(string destination)
+    {
+      if (string.IsNullOrWhiteSpace(destination) || destination.Length > 50)
+      {
+        throw new ArgumentException("Destination must contain between 1 and 50 characters.", nameof(destination));
+      }
+
+      TraceResult result = new TraceResult();
+
+      using SqlConnection connection = new SqlConnection(_connectionString);
+      using SqlCommand command =
+        new SqlCommand("[PingTrace].[spTrace]", connection)
+        {
+          CommandType = CommandType.StoredProcedure
+        };
+
+      command.Parameters.Add("@destination", SqlDbType.NVarChar, 50).Value = destination;
+
+      connection.Open();
+      using SqlDataReader reader = command.ExecuteReader();
+
+      if (!reader.Read())
+      {
+        throw new InvalidOperationException("The database trace procedure returned no result.");
+      }
+
+      result.Id = reader.GetGuid(0);
+      result.Name = reader.GetString(1);
+      result.Identity = reader.GetString(2);
+      result.MachineName = reader.GetString(3);
+      result.Finish(reader.GetString(4));
+
+      return result;
+    }
+  }
 }

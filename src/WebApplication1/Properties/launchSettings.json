@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "WebApplication1": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "PingTrace",
+      "applicationUrl": "http://localhost:4743",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,85 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Patware.PingTrace.Core;
+﻿using Patware.PingTrace.Core;
 
 namespace WebApplication1.Services
 {
-    public class PingTraceServiceForMvc : Patware.PingTrace.Core.IPingTraceService
+  public sealed class PingTraceServiceForMvc(HttpClient client, IConfiguration configuration)
+  {
+    private static readonly Guid ThisId = new Guid("A110F236-5A01-440D-B5F1-12D8901642D3");
+
+    private const string ThisName = "WebApplication1";
+
+
+    public string Ping()
     {
-        private readonly Guid _thisId = new Guid("{A110F236-5A01-440D-B5F1-12D8901642D3}");
-        private readonly string _thisName = "WebApplication1";
-        
-        public string Ping()
-        {
-            return "Pong";
-        }
-
-        public List<TraceResult> Trace(string destination)
-        {
-            var l = new List<TraceResult>();
-
-            var tr = new TraceResult(id: _thisId);
-            tr.Name = _thisName;
-            tr.MachineName = System.Environment.MachineName;
-            tr.Identity = System.Environment.UserDomainName;
-            
-            l.Add(tr);
-
-            if (!string.IsNullOrEmpty(destination) && destination.ToLowerInvariant() !=  _thisName.ToLowerInvariant())
-            {
-                var mws = new MyWebService1.WebService1SoapClient();
-                var res = mws.Trace(destination);
-                foreach(var re in res)
-                {
-                    l.Add(new TraceResult() {
-                        Id = re.Id
-                        , FinishedAt = re.FinishedAt
-                        , Identity = re.Identity
-                        , MachineName = re.MachineName
-                        , Name = re.Name
-                        , Payload = re.Payload
-                        , StartedAt = re.StartedAt });
-                }
-            }
-
-            tr.Finish(string.Format("Pong [{0}]", destination));
-
-            return l;
-        }
-
-        public List<TraceDestination> Traces()
-        {
-            var l = new List<TraceDestination>();
-            var td = new TraceDestination(id: _thisId, name: _thisName);
-            td.ExpectedElapsedMilisecondsAverage = 1;
-            td.ExpectedElapsedMilisecondsMax = 1;
-            td.ExpectedIdentity = Properties.Settings.Default.ExpectedIdentityMvc;
-            td.ExpectedMachineNames = new[] { Properties.Settings.Default.ExpectedMachineNameMvc };
-            td.PayloadDescription = "Pong and the destination in square brackets";
-            td.PayloadRegex = "Pong \\[.*\\]";
-            l.Add(td);
-            
-            var mws = new MyWebService1.WebService1SoapClient();
-            var traces = mws.Traces();
-
-            foreach(var traceDestination in traces)
-            {
-                l.Add(new TraceDestination() {
-                    Id = traceDestination.Id
-                    , Name = traceDestination.Name
-                    , ExpectedElapsedMilisecondsAverage = traceDestination.ExpectedElapsedMilisecondsAverage
-                    , ExpectedElapsedMilisecondsMax = traceDestination.ExpectedElapsedMilisecondsMax
-                    , ExpectedIdentity = traceDestination.ExpectedIdentity
-                    , ExpectedMachineNames = traceDestination.ExpectedMachineNames.ToArray()
-                    , PayloadDescription = traceDestination.PayloadDescription
-                    , PayloadRegex = traceDestination.PayloadRegex
-                });
-            }
-
-            return l;
-        }
+      return "Pong";
     }
+
+    public async Task<List<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken)
+    {
+      TraceResult current = new TraceResult(ThisId)
+      {
+        Name = ThisName,
+        MachineName = Environment.MachineName,
+        Identity = Environment.UserDomainName
+      };
+
+      List<TraceResult> results = new List<TraceResult> { current };
+
+      if (!string.IsNullOrEmpty(destination)
+          && !string.Equals(
+            destination, ThisName, StringComparison.OrdinalIgnoreCase))
+      {
+        string path = "api/WebService1/Trace?destination="
+          + Uri.EscapeDataString(destination);
+
+        List<TraceResult> downstream =
+          await client.GetFromJsonAsync<List<TraceResult>>(path, cancellationToken)
+            ?? throw new InvalidOperationException(
+              "WebService1 returned a null trace response.");
+
+        results.AddRange(downstream);
+      }
+
+      current.Finish($"Pong [{destination}]");
+      return results;
+    }
+
+    public async Task<List<TraceDestination>> TracesAsync(CancellationToken cancellationToken)
+    {
+      List<TraceDestination> destinations = new List<TraceDestination>
+      {
+        new TraceDestination(ThisId, ThisName)
+        {
+          ExpectedElapsedMilisecondsAverage = 1,
+          ExpectedElapsedMilisecondsMax = 1,
+          ExpectedIdentity = configuration["PingTrace:ExpectedIdentityMvc"] ?? string.Empty,
+          ExpectedMachineNames = new[]
+          {
+            configuration["PingTrace:ExpectedMachineNameMvc"] ?? string.Empty
+          },
+          PayloadDescription = "Pong and the destination in square brackets",
+          PayloadRegex = @"Pong \[.*\]"
+        }
+      };
+
+      List<TraceDestination> downstream =
+        await client.GetFromJsonAsync<List<TraceDestination>>(
+          "api/WebService1/Traces", cancellationToken)
+        ?? throw new InvalidOperationException(
+          "WebService1 returned a null destinations response.");
+
+      destinations.AddRange(downstream);
+      return destinations;
+    }
+  }
 }

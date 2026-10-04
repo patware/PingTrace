@@ -1,34 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace WebApplication1.Controllers
 {
-    public class PingTraceController : Controller
+  public sealed class PingTraceController(Services.PingTraceServiceForMvc service) : Controller
+  {
+
+    // GET: PingTrace
+    [HttpGet]
+    public IActionResult Index()
     {
-        private Patware.PingTrace.Core.IPingTraceService _pingTraceService = new Services.PingTraceServiceForMvc();
-
-        // GET: PingTrace
-        public ActionResult Index()
-        {
-            return View();
-        }
-
-        public ActionResult Ping()
-        {
-            return Content(_pingTraceService.Ping());
-        }
-
-        public ActionResult Traces()
-        {
-            return Json(_pingTraceService.Traces(), JsonRequestBehavior.AllowGet);
-        }
-
-        public ActionResult Trace(string destination)
-        {
-            return Json(_pingTraceService.Trace(destination), JsonRequestBehavior.AllowGet);
-        }
+      return View();
     }
+
+    [HttpGet]
+    public IActionResult Ping()
+    {
+      return Content(service.Ping(), "text/plain");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Traces(CancellationToken cancellationToken)
+    {
+      return Json(await service.TracesAsync(cancellationToken));
+    }
+
+    public async Task<IActionResult> Trace(string destination, CancellationToken cancellationToken)
+    {
+      return Json(await service.TraceAsync(destination, cancellationToken));
+    }
+  }
 }
