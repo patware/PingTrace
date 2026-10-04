@@ -2,7 +2,7 @@
 
 namespace WebApplication1.Services
 {
-  public sealed class PingTraceServiceForMvc(HttpClient client, IConfiguration configuration)
+  public sealed class PingTraceServiceForMvc(HttpClient client, IConfiguration configuration) : IPingTrace, IDiscovery
   {
     private static readonly Guid ThisId = new Guid("A110F236-5A01-440D-B5F1-12D8901642D3");
 
@@ -14,7 +14,27 @@ namespace WebApplication1.Services
       return "Pong";
     }
 
-    public async Task<List<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken)
+    public async Task<TraceResult> TraceAsync(CancellationToken cancellationToken)
+    {
+      TraceResult current = new TraceResult(ThisId)
+      {
+        Name = ThisName,
+        MachineName = Environment.MachineName,
+        Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
+      };
+
+      string path = "api/WebService1/Trace";
+
+      TraceResult downstream =
+        await client.GetFromJsonAsync<TraceResult>(path, cancellationToken)
+          ?? throw new InvalidOperationException(
+            "WebService1 returned a null trace response.");
+
+      current.Finish($"Pong");
+      return current;
+    }
+
+    public async Task<IList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken)
     {
       TraceResult current = new TraceResult(ThisId)
       {
@@ -44,7 +64,7 @@ namespace WebApplication1.Services
       return results;
     }
 
-    public async Task<List<TraceDestination>> TracesAsync(CancellationToken cancellationToken)
+    public async Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken)
     {
       List<TraceDestination> destinations = new List<TraceDestination>
       {
@@ -63,8 +83,7 @@ namespace WebApplication1.Services
       };
 
       List<TraceDestination> downstream =
-        await client.GetFromJsonAsync<List<TraceDestination>>(
-          "api/WebService1/Traces", cancellationToken)
+        await client.GetFromJsonAsync<List<TraceDestination>>("api/WebService1/Destinations", cancellationToken)
         ?? throw new InvalidOperationException(
           "WebService1 returned a null destinations response.");
 

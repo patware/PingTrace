@@ -4,51 +4,45 @@ using System.Data;
 
 namespace WebApplication1.Data
 {
-  public sealed class Repository : IRepository
+  public sealed class Repository(IConfiguration configuration) : IRepository
   {
-    private readonly string _connectionString;
-
-    public Repository(IConfiguration configuration)
-    {
-      _connectionString = configuration.GetConnectionString("Database1")
+    private readonly string _connectionString = configuration.GetConnectionString("Database1")
         ?? throw new InvalidOperationException(
           "ConnectionStrings:Database1 is not configured.");
-    }
 
-    public string RunPing()
+    public async Task<string> RunPingAsync(CancellationToken cancellationToken)
     {
-      using SqlConnection connection = new SqlConnection(_connectionString);
+      using SqlConnection connection = new(_connectionString);
       using SqlCommand command =
-        new SqlCommand("[PingTrace].[spPing]", connection)
+        new("[PingTrace].[spPing]", connection)
         {
           CommandType = CommandType.StoredProcedure
         };
 
-      connection.Open();
-      return command.ExecuteScalar() as string ?? string.Empty;
+      await connection.OpenAsync(cancellationToken);
+      return await command.ExecuteScalarAsync(cancellationToken) as string ?? string.Empty;
     }
 
-    public IList<TraceDestination> RunTraces()
+    public async Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken)
     {
-      using SqlConnection connection = new SqlConnection(_connectionString);
+      using SqlConnection connection = new(_connectionString);
       using SqlCommand command =
-        new SqlCommand("[PingTrace].[spTraces]", connection)
+        new("[PingTrace].[spTraces]", connection)
         {
           CommandType = CommandType.StoredProcedure
         };
 
-      connection.Open();
-      using SqlDataReader reader = command.ExecuteReader();
+      await connection.OpenAsync(cancellationToken);
+      using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
 
-      List<TraceDestination> destinations = new List<TraceDestination>();
+      List<TraceDestination> destinations = [];
 
-      while (reader.Read())
+      while (await reader.ReadAsync(cancellationToken))
       {
-        destinations.Add(new TraceDestination(
-          reader.GetGuid(0), reader.GetString(1))
+        destinations.Add(new TraceDestination(reader.GetGuid(0), reader.GetString(1))
         {
           ExpectedIdentity = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-          ExpectedMachineNames = new[] { reader.GetString(3) },
+          ExpectedMachineNames = [reader.GetString(3)],
           ExpectedElapsedMilisecondsMax = reader.GetInt32(4),
           ExpectedElapsedMilisecondsAverage = reader.GetInt32(5),
           PayloadDescription = reader.GetString(6),
@@ -59,28 +53,25 @@ namespace WebApplication1.Data
       return destinations;
     }
 
-    public TraceResult RunTrace(string destination)
+
+    public async Task<TraceResult> RunTraceAsync(CancellationToken cancellationToken)
     {
-      if (string.IsNullOrWhiteSpace(destination) || destination.Length > 50)
-      {
-        throw new ArgumentException("Destination must contain between 1 and 50 characters.", nameof(destination));
-      }
 
-      TraceResult result = new TraceResult();
+      TraceResult result = new();
 
-      using SqlConnection connection = new SqlConnection(_connectionString);
+      using SqlConnection connection = new(_connectionString);
       using SqlCommand command =
-        new SqlCommand("[PingTrace].[spTrace]", connection)
+        new("[PingTrace].[spTrace]", connection)
         {
           CommandType = CommandType.StoredProcedure
         };
 
-      command.Parameters.Add("@destination", SqlDbType.NVarChar, 50).Value = destination;
+      command.Parameters.Add("@destination", SqlDbType.NVarChar, 50).Value = "Database1";
 
-      connection.Open();
-      using SqlDataReader reader = command.ExecuteReader();
+      await connection.OpenAsync(cancellationToken);
+      using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
 
-      if (!reader.Read())
+      if (!await reader.ReadAsync(cancellationToken))
       {
         throw new InvalidOperationException("The database trace procedure returned no result.");
       }
@@ -93,5 +84,21 @@ namespace WebApplication1.Data
 
       return result;
     }
+
+    public async Task<IList<TraceResult>> RunTraceAsync(string destination, CancellationToken cancellationToken = default)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      ArgumentException.ThrowIfNullOrWhiteSpace(destination);
+
+      if (!string.Equals(destination, "Database1", StringComparison.OrdinalIgnoreCase))
+      {
+        throw new KeyNotFoundException(
+          $"Unknown database trace destination '{destination}'.");
+      }
+
+      TraceResult result = await RunTraceAsync(cancellationToken);
+      return [result];
+    }
+
   }
 }

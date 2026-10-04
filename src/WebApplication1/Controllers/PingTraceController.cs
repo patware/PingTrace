@@ -18,15 +18,17 @@ namespace WebApplication1.Controllers
       return Content(service.Ping(), "text/plain");
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Traces(CancellationToken cancellationToken)
-    {
-      return Json(await service.TracesAsync(cancellationToken));
-    }
 
     public async Task<IActionResult> Trace(string destination, CancellationToken cancellationToken)
     {
       return Json(await service.TraceAsync(destination, cancellationToken));
     }
+
+    [HttpGet]
+    public async Task<IActionResult> DestinationsAsync(CancellationToken cancellationToken)
+    {
+      return Json(await service.GetDestinationsAsync(cancellationToken));
+    }
+
   }
 }

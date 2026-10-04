@@ -26,7 +26,7 @@ namespace ConsoleApplication1
     private static async Task DiscoverAsync(HttpClient client)
     {
       string ping = await client.GetStringAsync("PingTrace/Ping");
-      string destinationsJson = await client.GetStringAsync("PingTrace/Traces");
+      string destinationsJson = await client.GetStringAsync("PingTrace/Destinations");
 
       Console.WriteLine("Ping:");
       Console.WriteLine(ping);

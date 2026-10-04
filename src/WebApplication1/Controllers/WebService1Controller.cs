@@ -1,3 +1,5 @@
+#nullable enable
+
 using Microsoft.AspNetCore.Mvc;
 using WebApplication1.Services;
 
@@ -14,16 +16,35 @@ namespace WebApplication1.Controllers
       return Content(service.Ping(), "text/plain");
     }
 
-    [HttpGet("Traces")]
-    public IActionResult Traces()
+    [HttpGet("Destinations")]
+    public async Task<IActionResult> DestinationsAsync(CancellationToken cancellationToken)
     {
-      return Ok(service.Traces());
+      return Ok(await service.GetDestinationsAsync(cancellationToken));
     }
 
+
     [HttpGet("Trace")]
-    public IActionResult Trace([FromQuery] string destination)
+    public async Task<IActionResult> TraceAsync(CancellationToken cancellationToken, [FromQuery] string? destination = null)
     {
-      return Ok(service.Trace(destination));
+      if (!Request.Query.ContainsKey("destination"))
+      {
+        return Ok(await service.TraceAsync(cancellationToken));
+      }
+
+      if (string.IsNullOrWhiteSpace(destination))
+      {
+        return BadRequest("Destination must not be empty.");
+      }
+
+      try
+      {
+        return Ok(await service.TraceAsync(destination, cancellationToken));
+      }
+      catch (KeyNotFoundException)
+      {
+        return NotFound("The requested destination is not known.");
+      }
+
     }
   }
 }

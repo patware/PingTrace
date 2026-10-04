@@ -3,10 +3,9 @@ using WebApplication1.Data;
 
 namespace WebApplication1.Services
 {
-  public sealed class PingTraceServiceForWebService(IRepository repository, IConfiguration configuration) : IPingTraceService
+  public sealed class PingTraceServiceForWebService(IRepository repository, IConfiguration configuration) : IPingTrace, IDiscovery
   {
-    private static readonly Guid ThisId =
-      new Guid("32DE64E4-6FB4-4F8B-A2C5-C42BF1313141");
+    private static readonly Guid ThisId = new("32DE64E4-6FB4-4F8B-A2C5-C42BF1313141");
 
     private const string ThisName = "WebService1";
 
@@ -15,48 +14,79 @@ namespace WebApplication1.Services
       return "Pong";
     }
 
-    public List<TraceResult> Trace(string destination)
+
+    public Task<TraceResult> TraceAsync(CancellationToken cancellationToken = default)
     {
-      TraceResult current = new TraceResult(ThisId)
-      {
-        Name = ThisName,
-        MachineName = Environment.MachineName,
-        Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
-      };
+      cancellationToken.ThrowIfCancellationRequested();
 
-      List<TraceResult> results = new List<TraceResult> { current };
+      TraceResult current = CreateLocalResult();
 
-      if (string.Equals(destination, "Database1", StringComparison.OrdinalIgnoreCase))
+      current.Finish("Pong");
+
+      return Task.FromResult(current);
+    }
+
+    public async Task<IList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
+      ArgumentException.ThrowIfNullOrWhiteSpace(destination);
+
+      bool isLocal = string.Equals(destination, ThisName, StringComparison.OrdinalIgnoreCase);
+
+      bool isDatabase = string.Equals(destination, "Database1", StringComparison.OrdinalIgnoreCase);
+
+      if (!isLocal && !isDatabase)
       {
-        results.Add(repository.RunTrace(destination));
+        throw new KeyNotFoundException($"Unknown trace destination '{destination}'.");
+      }
+
+      TraceResult current = CreateLocalResult();
+
+      List<TraceResult> results = [current];
+
+      if (isDatabase)
+      {
+        results.AddRange(await repository.RunTraceAsync(destination, cancellationToken));
       }
 
       current.Finish($"Pong [{destination}]");
+
       return results;
     }
 
-    public List<TraceDestination> Traces()
+    public async Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken = default)
     {
-      List<TraceDestination> destinations = new List<TraceDestination>
-      {
+      List<TraceDestination> destinations =
+      [
         new TraceDestination(ThisId, ThisName)
         {
           ExpectedElapsedMilisecondsAverage = 1,
           ExpectedElapsedMilisecondsMax = 1,
           ExpectedIdentity = configuration["PingTrace:ExpectedIdentityWebService"]
             ?? string.Empty,
-          ExpectedMachineNames = new[]
-          {
+          ExpectedMachineNames =
+          [
             configuration["PingTrace:ExpectedMachineNameWebService"]
             ?? string.Empty
-          },
+          ],
           PayloadDescription = "Pong and the destination in square brackets",
           PayloadRegex = @"Pong \[.*\]"
-        }
-      };
+        },
+        .. await repository.GetDestinationsAsync(cancellationToken),
+      ];
 
-      destinations.AddRange(repository.RunTraces());
       return destinations;
     }
+
+    private static TraceResult CreateLocalResult()
+    {
+      return new TraceResult(ThisId)
+      {
+        Name = ThisName,
+        MachineName = Environment.MachineName,
+        Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
+      };
+    }
+
   }
 }
