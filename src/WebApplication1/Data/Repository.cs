@@ -23,7 +23,7 @@ namespace WebApplication1.Data
       return await command.ExecuteScalarAsync(cancellationToken) as string ?? string.Empty;
     }
 
-    public async Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken)
     {
       using SqlConnection connection = new(_connectionString);
       using SqlCommand command =
@@ -85,7 +85,7 @@ namespace WebApplication1.Data
       return result;
     }
 
-    public async Task<IList<TraceResult>> RunTraceAsync(string destination, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TraceResult>> RunTraceAsync(string destination, CancellationToken cancellationToken = default)
     {
       cancellationToken.ThrowIfCancellationRequested();
       ArgumentException.ThrowIfNullOrWhiteSpace(destination);

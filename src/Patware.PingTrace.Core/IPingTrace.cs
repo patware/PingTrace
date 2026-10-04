@@ -10,6 +10,6 @@ namespace Patware.PingTrace.Core
 
     Task<Patware.PingTrace.Core.TraceResult> TraceAsync(CancellationToken cancellationToken = default);
 
-    Task<IList<Patware.PingTrace.Core.TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Patware.PingTrace.Core.TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default);
   }
 }

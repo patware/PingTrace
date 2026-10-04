@@ -7,6 +7,6 @@ namespace WebApplication1.Data
     Task<string> RunPingAsync(CancellationToken cancellationToken = default);
 
     Task<TraceResult> RunTraceAsync(CancellationToken cancellationToken = default);
-    Task<IList<TraceResult>> RunTraceAsync(string destination, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TraceResult>> RunTraceAsync(string destination, CancellationToken cancellationToken = default);
   }
 }

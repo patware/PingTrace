@@ -6,6 +6,6 @@ namespace Patware.PingTrace.Core
 {
   public interface IDiscovery
   {
-    Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken = default);
   }
 }

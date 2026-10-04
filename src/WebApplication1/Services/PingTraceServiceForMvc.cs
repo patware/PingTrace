@@ -4,7 +4,7 @@ namespace WebApplication1.Services
 {
   public sealed class PingTraceServiceForMvc(HttpClient client, IConfiguration configuration) : IPingTrace, IDiscovery
   {
-    private static readonly Guid ThisId = new Guid("A110F236-5A01-440D-B5F1-12D8901642D3");
+    private static readonly Guid ThisId = new("A110F236-5A01-440D-B5F1-12D8901642D3");
 
     private const string ThisName = "WebApplication1";
 
@@ -16,34 +16,32 @@ namespace WebApplication1.Services
 
     public async Task<TraceResult> TraceAsync(CancellationToken cancellationToken)
     {
-      TraceResult current = new TraceResult(ThisId)
+
+      cancellationToken.ThrowIfCancellationRequested();
+
+      TraceResult current = new(ThisId)
       {
         Name = ThisName,
         MachineName = Environment.MachineName,
         Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
       };
-
-      string path = "api/WebService1/Trace";
-
-      TraceResult downstream =
-        await client.GetFromJsonAsync<TraceResult>(path, cancellationToken)
-          ?? throw new InvalidOperationException(
-            "WebService1 returned a null trace response.");
 
       current.Finish($"Pong");
       return current;
     }
 
-    public async Task<IList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken)
     {
-      TraceResult current = new TraceResult(ThisId)
+      cancellationToken.ThrowIfCancellationRequested();
+
+      TraceResult current = new(ThisId)
       {
         Name = ThisName,
         MachineName = Environment.MachineName,
         Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
       };
 
-      List<TraceResult> results = new List<TraceResult> { current };
+      List<TraceResult> results = [current];
 
       if (!string.IsNullOrEmpty(destination)
           && !string.Equals(
@@ -64,23 +62,23 @@ namespace WebApplication1.Services
       return results;
     }
 
-    public async Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken)
     {
-      List<TraceDestination> destinations = new List<TraceDestination>
-      {
+      List<TraceDestination> destinations =
+      [
         new TraceDestination(ThisId, ThisName)
         {
           ExpectedElapsedMilisecondsAverage = 1,
           ExpectedElapsedMilisecondsMax = 1,
           ExpectedIdentity = configuration["PingTrace:ExpectedIdentityMvc"] ?? string.Empty,
-          ExpectedMachineNames = new[]
-          {
+          ExpectedMachineNames =
+          [
             configuration["PingTrace:ExpectedMachineNameMvc"] ?? string.Empty
-          },
+          ],
           PayloadDescription = "Pong and the destination in square brackets",
           PayloadRegex = @"Pong \[.*\]"
         }
-      };
+      ];
 
       List<TraceDestination> downstream =
         await client.GetFromJsonAsync<List<TraceDestination>>("api/WebService1/Destinations", cancellationToken)

@@ -26,7 +26,7 @@ namespace WebApplication1.Services
       return Task.FromResult(current);
     }
 
-    public async Task<IList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default)
     {
       cancellationToken.ThrowIfCancellationRequested();
       ArgumentException.ThrowIfNullOrWhiteSpace(destination);
@@ -54,7 +54,7 @@ namespace WebApplication1.Services
       return results;
     }
 
-    public async Task<IList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken = default)
     {
       List<TraceDestination> destinations =
       [
