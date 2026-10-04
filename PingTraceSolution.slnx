@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/TestApps/">
+    <Project Path="src/ConsoleApplication1/ConsoleApplication1.csproj" Id="470dcb51-955e-4352-95e9-10601e4bc2ea">
+      <BuildDependency Project="src/WebApplication1/WebApplication1.csproj" />
+    </Project>
+    <Project Path="src/Database1/Database1.sqlproj" Id="d410746a-7ee4-4525-937f-45f6c955a4de">
+      <Build />
+      <Deploy />
+    </Project>
+    <Project Path="src/WebApplication1/WebApplication1.csproj" Id="54d6f5ef-5d6a-4d2d-83cf-a9f4abe75fe6" />
+  </Folder>
+  <Project Path="src/Patware.PingTrace.Core/Patware.PingTrace.Core.csproj" Id="0c942059-0efb-4e2a-aa4f-39a4728f2ab7" />
+</Solution>
