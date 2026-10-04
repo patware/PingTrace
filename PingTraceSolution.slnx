@@ -3,7 +3,6 @@
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />
     <File Path=".gitignore" />
-    <File Path="global.json" />
   </Folder>
   <Folder Name="/TestApps/">
     <Project Path="src/ConsoleApplication1/ConsoleApplication1.csproj" Id="470dcb51-955e-4352-95e9-10601e4bc2ea">

@@ -21,7 +21,7 @@ namespace WebApplication1.Services
       {
         Name = ThisName,
         MachineName = Environment.MachineName,
-        Identity = Environment.UserDomainName
+        Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
       };
 
       List<TraceResult> results = new List<TraceResult> { current };

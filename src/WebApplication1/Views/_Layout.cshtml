@@ -4,30 +4,61 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewBag.Title - PingTrace</title>
-    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
-    <link href="~/Content/Site.css" rel="stylesheet" />
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/Content/Site.css" rel="stylesheet" asp-append-version="true" />
 </head>
 <body>
-    <nav class="navbar navbar-expand-sm navbar-dark bg-dark fixed-top">
-        <div class="container">
-            <a class="navbar-brand"
-               asp-controller="Home"
-               asp-action="Index">PingTrace</a>
-            <a class="nav-link text-light"
-               asp-controller="PingTrace"
-               asp-action="Index">Ping / Trace</a>
-        </div>
-    </nav>
+  <header>
+    <nav class="navbar navbar-expand-md bg-dark fixed-top"
+         data-bs-theme="dark"
+         aria-label="Main navigation">
+      <div class="container">
+        <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+          PingTrace
+        </a>
 
-    <main class="container body-content">
-        @RenderBody()
-        <hr />
-        <footer>
-            <p>&copy; @DateTime.Now.Year - Patrice Calvé</p>
-        </footer>
+        <button class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mainNavigation"
+                aria-controls="mainNavigation"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavigation">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" asp-controller="Home" asp-action="Index">
+                Home
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" asp-controller="PingTrace" asp-action="Index">
+                Ping / Trace
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="container body-content">
+    <main>
+      @RenderBody()
     </main>
 
-    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    <hr />
+
+    <footer>
+      <p>&copy; @DateTime.Now.Year - Patrice Calvé</p>
+    </footer>
+  </div>
+
+  <script src="~/Scripts/bootstrap.bundle.min.js" asp-append-version="true"></script>
+
+  @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
