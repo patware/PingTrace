@@ -18,6 +18,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Patware.PingTrace.Tests/Patware.PingTrace.Tests.csproj" />
   </Folder>
+  <Project Path="src/Patware.PingTrace.AspNetCore/Patware.PingTrace.AspNetCore.csproj" Id="30020ec9-0597-493c-8a86-7491acdd3c1f" />
   <Project Path="src/Patware.PingTrace.Core/Patware.PingTrace.Core.csproj" Id="0c942059-0efb-4e2a-aa4f-39a4728f2ab7" />
   <Project Path="src/Patware.PingTrace/Patware.PingTrace.csproj" Id="5a1b7ccf-5559-4929-9d7a-262b115ded7b" />
 </Solution>

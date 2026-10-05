@@ -1,4 +1,5 @@
 using Patware.PingTrace;
+using Patware.PingTrace.AspNetCore;
 using Patware.PingTrace.Core;
 using WebApplication1.Data;
 using WebApplication1.Services;
@@ -34,6 +35,11 @@ builder.Services.AddHttpClient<PingTraceServiceForMvc>(client =>
   client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+  options.SerializerOptions.PropertyNamingPolicy = null;
+});
+
 WebApplication app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -52,6 +58,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+
+app.MapPingTrace("/api/WebService1");
+app.MapPingTraceDiscovery("/api/WebService1");
 
 app.MapControllers();
 
