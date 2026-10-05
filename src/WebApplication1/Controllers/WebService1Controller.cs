@@ -1,25 +1,25 @@
 #nullable enable
 
 using Microsoft.AspNetCore.Mvc;
-using WebApplication1.Services;
+using Patware.PingTrace.Core;
 
 namespace WebApplication1.Controllers
 {
   [ApiController]
   [Route("api/WebService1")]
-  public sealed class WebService1Controller(PingTraceServiceForWebService service) : ControllerBase
+  public sealed class WebService1Controller(IPingTrace pingTrace, IDiscovery discovery) : ControllerBase
   {
 
     [HttpGet("Ping")]
     public IActionResult Ping()
     {
-      return Content(service.Ping(), "text/plain");
+      return Content(pingTrace.Ping(), "text/plain");
     }
 
     [HttpGet("Destinations")]
     public async Task<IActionResult> DestinationsAsync(CancellationToken cancellationToken)
     {
-      return Ok(await service.GetDestinationsAsync(cancellationToken));
+      return Ok(await discovery.GetDestinationsAsync(cancellationToken));
     }
 
 
@@ -28,7 +28,7 @@ namespace WebApplication1.Controllers
     {
       if (!Request.Query.ContainsKey("destination"))
       {
-        return Ok(await service.TraceAsync(cancellationToken));
+        return Ok(await pingTrace.TraceAsync(cancellationToken));
       }
 
       if (string.IsNullOrWhiteSpace(destination))
@@ -38,7 +38,7 @@ namespace WebApplication1.Controllers
 
       try
       {
-        return Ok(await service.TraceAsync(destination, cancellationToken));
+        return Ok(await pingTrace.TraceAsync(destination, cancellationToken));
       }
       catch (KeyNotFoundException)
       {

@@ -1,3 +1,5 @@
+using Patware.PingTrace;
+using Patware.PingTrace.Core;
 using WebApplication1.Data;
 using WebApplication1.Services;
 
@@ -12,7 +14,15 @@ builder.Services
   });
 
 builder.Services.AddScoped<IRepository, Repository>();
-builder.Services.AddScoped<PingTraceServiceForWebService>();
+
+builder.Services.AddPingTrace(options =>
+{
+  options.Id = Guid.Parse("32DE64E4-6FB4-4F8B-A2C5-C42BF1313141");
+  options.Name = "WebService1";
+});
+
+builder.Services.AddPingTraceDestination<DatabaseTraceDestination>();
+builder.Services.AddScoped<IDiscovery, WebServiceDiscovery>();
 
 builder.Services.AddHttpClient<PingTraceServiceForMvc>(client =>
 {

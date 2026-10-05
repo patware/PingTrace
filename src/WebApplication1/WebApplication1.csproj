@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Patware.PingTrace.Core\Patware.PingTrace.Core.csproj" />
+    <ProjectReference Include="..\Patware.PingTrace\Patware.PingTrace.csproj" />
   </ItemGroup>
 
 </Project>
