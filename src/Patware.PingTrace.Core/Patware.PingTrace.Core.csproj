@@ -3,9 +3,6 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<ProjectGuid>{0C942059-0EFB-4E2A-AA4F-39A4728F2AB7}</ProjectGuid>
-	</PropertyGroup>
-
-	<PropertyGroup>
 		<AssemblyTitle>Patware.PingTrace.Core</AssemblyTitle>
 		<Product>Patware.PingTrace.Core</Product>
 		<Copyright>Copyright (c) 2026 Patrice Calvé</Copyright>
