@@ -1,0 +1,13 @@
+items:
+- name: Architecture
+  href: ARCHITECTURE.md
+- name: Principles
+  href: ARCHITECTURAL-PRINCIPLES.md
+- name: Distributed hosting
+  href: DISTRIBUTED-HOSTING.md
+- name: Extensions
+  href: PLUGIN-ARCHITECTURE.md
+- name: Observability
+  href: OBSERVABILITY.md
+- name: Security
+  href: SECURITY.md
