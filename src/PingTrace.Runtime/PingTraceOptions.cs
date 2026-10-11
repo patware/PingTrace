@@ -1,9 +1,7 @@
-﻿namespace PingTrace.Runtime
+namespace PingTrace.Runtime;
+
+public sealed class PingTraceOptions
 {
-  public sealed class PingTraceOptions
-  {
-    public Guid Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
-  }
 }

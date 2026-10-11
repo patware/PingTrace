@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PingTrace.Core
+namespace PingTrace.Core;
+
+public interface IDiscovery
 {
-  public interface IDiscovery
-  {
     Task<IReadOnlyList<TraceDestination>> GetDestinationsAsync(CancellationToken cancellationToken = default);
-  }
 }

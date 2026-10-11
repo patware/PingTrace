@@ -1,21 +1,15 @@
-﻿using System;
+using System;
 
-namespace PingTrace.Core
+namespace PingTrace.Core;
+
+
+public class TraceResult
 {
-
-  public class TraceResult
-  {
     public TraceResult()
     {
-      this.Id = Guid.NewGuid();
-      this.StartedAt = DateTime.Now;
-    }
-    public TraceResult(Guid id) : this()
-    {
-      this.Id = id;
+        this.StartedAt = DateTime.Now;
     }
 
-    public Guid Id { get; set; }
     public string Name { get; set; }
 
     public string Identity { get; set; }
@@ -35,13 +29,12 @@ namespace PingTrace.Core
 
     public void Finish(string payload)
     {
-      this.Payload = payload;
-      this.FinishedAt = DateTime.Now;
+        this.Payload = payload;
+        this.FinishedAt = DateTime.Now;
     }
     public TimeSpan Elapsed
     {
-      get { return FinishedAt - StartedAt; }
+        get { return FinishedAt - StartedAt; }
     }
 
-  }
 }

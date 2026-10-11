@@ -1,23 +1,14 @@
-﻿using System;
+namespace PingTrace.Core;
 
-namespace PingTrace.Core
+public class TraceDestination
 {
-  public class TraceDestination
-  {
     public TraceDestination()
     {
-      this.Id = Guid.NewGuid();
     }
-    public TraceDestination(Guid id, string name)
+    public TraceDestination(string name)
     {
-      this.Id = id;
-      this.Name = name;
+        this.Name = name;
     }
-
-    /// <summary>
-    /// Unique id, whatever the "project"
-    /// </summary>
-    public Guid Id { get; set; }
 
     /// <summary>
     /// Friendly name of the target for this "project"
@@ -46,5 +37,4 @@ namespace PingTrace.Core
     /// A regex string that will be used to validate the payload.
     /// </summary>
     public string PayloadRegex { get; set; }
-  }
 }

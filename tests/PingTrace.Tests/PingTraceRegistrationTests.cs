@@ -33,7 +33,6 @@ public sealed class PingTraceRegistrationTests
         TraceResult result = await sut.TraceAsync(TestContext.CancellationToken);
 
         sut.Should().BeOfType<DefaultPingTrace>();
-        result.Id.Should().Be(ApplicationId);
         result.Name.Should().Be("TestApp");
         result.Payload.Should().Be("Pong");
     }
@@ -68,7 +67,6 @@ public sealed class PingTraceRegistrationTests
 
         services.AddPingTrace(options =>
         {
-            options.Id = missingId ? Guid.Empty : ApplicationId;
             options.Name = missingId ? "TestApp" : " ";
         });
 
@@ -143,7 +141,6 @@ public sealed class PingTraceRegistrationTests
 
     private static void Configure(PingTraceOptions options)
     {
-        options.Id = ApplicationId;
         options.Name = "TestApp";
     }
 

@@ -10,7 +10,6 @@ namespace PingTrace.Tests;
 [TestClass]
 public sealed class DefaultPingTraceTests
 {
-    private static readonly Guid ApplicationId = Guid.Parse("A110F236-5A01-440D-B5F1-12D8901642D3");
     private static readonly string ApplicationName = "TestApp";
 
     [TestMethod]
@@ -31,7 +30,6 @@ public sealed class DefaultPingTraceTests
 
         TraceResult result = await sut.TraceAsync(TestContext.CancellationToken);
 
-        result.Id.Should().Be(ApplicationId);
         result.Name.Should().Be(ApplicationName);
 
         result.MachineName.Should().Be(Environment.MachineName);
@@ -51,7 +49,6 @@ public sealed class DefaultPingTraceTests
 
         TraceResult result = results.Should().ContainSingle().Subject;
 
-        result.Id.Should().Be(ApplicationId);
         result.Name.Should().Be(ApplicationName);
         result.Payload.Should().Be($"Pong [{destination}]");
         result.FinishedAt.Should().NotBe(default);
@@ -92,7 +89,6 @@ public sealed class DefaultPingTraceTests
         results.Should().HaveCount(3);
         results.Select(result => result.Name).Should().Equal(ApplicationName, "RemoteService", "Database1");
 
-        results[0].Id.Should().Be(ApplicationId);
         results[0].Payload.Should().Be("Pong [database1]");
         results[0].FinishedAt.Should().NotBe(default);
 
@@ -212,7 +208,6 @@ public sealed class DefaultPingTraceTests
     {
         return new DefaultPingTrace(new PingTraceOptions
         {
-            Id = ApplicationId,
             Name = ApplicationName
         },
         destinations: destinations);
