@@ -1,39 +1,138 @@
 # PingTrace
 
-These guides describe the 0.0.1 implementation in `src/`, reviewed on 2026-10-10. They distinguish current behavior and implementation limits responsibilities. Publication is pending; VERSION identifies the prepared build.
+**Is it responding? Where is it running? What is it reaching?**
 
-Browse the [Core API reference](xref:PingTrace.Core) or start with the library matching your task:
+PingTrace provides application-level Ping and Trace diagnostics for .NET
+applications.
 
-| Library | Purpose |
-| --- | --- |
+Use Ping to confirm that application code responds. Use Trace to identify the
+responding application, machine, execution identity, and selected dependencies.
+Use the returned timing information to help investigate unexpected delays.
 
-## Documentation guide
+PingTrace complements health checks, deployment verification, and operational
+monitoring.
 
-Start with the architecture overview to understand the library boundaries, or the development setup to build and run the demo. Design documents explain source-derived choices rather than claiming historical approval of formal decisions.
+## Start with two calls
 
-| Area | Documents |
-| --- | --- |
-| Architecture | [Library architecture](architecture/ARCHITECTURE.md), [principles](architecture/ARCHITECTURAL-PRINCIPLES.md), and [execution model](architecture/PINGTRACE.md) |
-| Definitions and execution | [Definitions](architecture/PINGTRACE-DEFINITIONS.md) |
-| Persistence and integrations | [extension contracts](architecture/PLUGIN-ARCHITECTURE.md) |
-| Security and observability | [Security](architecture/SECURITY.md) |
-| Development | [Getting started](development/GETTING-STARTED.md), [coding guidance](development/CODING-STANDARDS.md) and [testing](development/TESTING.md) |
-| Design | [Implemented decisions](design/ADOPTION-DECISIONS.md) and [capability boundaries](design/CAPABILITY-BOUNDARIES.md). |
+In an ASP.NET Core application referencing `PingTrace.Runtime` and
+`PingTrace.AspNetCore`:
 
-## Generate this documentation
+```csharp
+using PingTrace.AspNetCore;
+using PingTrace.Runtime;
 
-With the .NET 10 SDK and DocFX installed, run these commands from the repository root:
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-```powershell
-dotnet restore PingTrace.slnx
-dotnet build PingTrace.slnx --configuration Release --no-restore
-docfx docs/docfx.json
+builder.Services.AddPingTrace();
+
+WebApplication app = builder.Build();
+
+app.MapPingTrace();
+
+app.Run();
 ```
 
-DocFX reads the compiled Release assemblies and their adjacent XML documentation files. This includes generated Razor components without requiring DocFX's bundled compiler to run the SDK's Razor generator. Rebuild after source/XML documentation changes. DocFX writes metadata to `docs/api` and HTML to `docs/_site`; both are ignored generated output. See [DocFX assembly input](https://dotnet.github.io/docfx/docs/dotnet-api-docs.html).
+This is sufficient for an application that needs local diagnostics without
+dependency tracing.
 
-To preview the site locally after building the assemblies, run:
+| Request | Default behavior |
+| --- | --- |
+| `GET /pingtrace/Ping` | Returns `Pong` as plain text. |
+| `GET /pingtrace/Trace` | Returns one local trace object. |
+| `GET /pingtrace/Trace?destination=NAME` | Traces the named destination and returns a result array. |
 
-```powershell
-docfx docs/docfx.json --serve
+Destination tracing requires a registered connector unless the destination
+matches the local application's name.
+
+Trace responses contain potentially sensitive diagnostic information.
+Applications control access through their hosting and authorization policies.
+
+See the [execution model](architecture/PINGTRACE.md) for response shapes,
+destination handling, timing, and failures.
+
+## Trace an HTTP dependency
+
+Also reference `PingTrace.Adapter.HttpClient` and replace the registration with:
+
+```csharp
+builder.Services.AddPingTrace(pingTrace =>
+{
+    pingTrace.AddHttpDestination("ApiService", client =>
+    {
+        client.BaseAddress = new Uri("https://api.example.com/");
+    });
+});
 ```
+
+Add `using PingTrace.Adapter.HttpClient;` to the application.
+
+Replace the example address with the remote application's address. The remote
+application must expose a compatible local Trace endpoint.
+
+Requesting `/pingtrace/Trace?destination=ApiService` returns the local result
+followed by the remote result.
+
+The HTTP adapter requests the remote application's local Trace. It does not
+automatically traverse that application's dependencies.
+
+See [distributed hosting](architecture/DISTRIBUTED-HOSTING.md) for the Aspire
+sample and [connector architecture](architecture/PLUGIN-ARCHITECTURE.md) for
+extension responsibilities.
+
+## Choose the libraries you need
+
+The current libraries target .NET 10.
+
+| Library | Responsibility |
+| --- | --- |
+| `PingTrace.Core` | Shared interfaces and trace results. |
+| `PingTrace.Runtime` | Default behavior, service registration, and dependency orchestration. |
+| `PingTrace.AspNetCore` | HTTP endpoints backed by an `IPingTrace` implementation. |
+| `PingTrace.Adapter.HttpClient` | Connectors that invoke remote HTTP Trace endpoints. |
+
+Applications supply their destination addresses, authentication requirements,
+and authorization policies.
+
+## Find your next step
+
+| I want to… | Read |
+| --- | --- |
+| Understand Ping, Trace, and the intended monitoring scenarios | [Definitions](architecture/PINGTRACE-DEFINITIONS.md) |
+| Understand library boundaries and request flow | [Architecture](architecture/ARCHITECTURE.md) |
+| Understand responses, failures, and elapsed time | [Execution model](architecture/PINGTRACE.md) |
+| Connect applications in the Aspire sample | [Distributed hosting](architecture/DISTRIBUTED-HOSTING.md) |
+| Implement a connector or custom application behavior | [Connector architecture](architecture/PLUGIN-ARCHITECTURE.md) |
+| Control access to diagnostic information | [Security](architecture/SECURITY.md) |
+| Use PingTrace with monitoring and deployment checks | [Observability](architecture/OBSERVABILITY.md) |
+| Understand the reasoning behind the design | [Architectural principles](architecture/ARCHITECTURAL-PRINCIPLES.md) and [implemented decisions](design/ADOPTION-DECISIONS.md) |
+| Distinguish implemented features from future possibilities | [Capability boundaries](design/CAPABILITY-BOUNDARIES.md) |
+| Build the libraries or run the sample | [Getting started](development/GETTING-STARTED.md) |
+| Contribute code and tests | [Coding standards](development/CODING-STANDARDS.md) and [testing](development/TESTING.md) |
+
+## Current scope
+
+The implementation supports Ping, local Trace, and explicitly named
+destination Trace.
+
+Trace All, automatic dependency discovery, recursive traversal, graph
+visualization, and built-in health-check integration are not currently
+implemented.
+
+The documentation distinguishes existing behavior from proposed capabilities.
+Design discussions do not imply that an API is available.
+
+## API reference and documentation preview
+
+The current DocFX metadata configuration has no API input files configured.
+Generated API reference pages are therefore not yet established.
+
+The Markdown guides describe the current implementation. See
+[Getting started](development/GETTING-STARTED.md#preview-the-documentation)
+for documentation preview instructions and the current API-generation
+limitations.
+
+## Project
+
+Visit the [GitHub repository](https://github.com/patware/Patware.PingTrace)
+for source code, package README files, contribution guidance, and issue
+reporting.

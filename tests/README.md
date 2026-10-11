@@ -1,38 +1,76 @@
 # Tests
 
-TODO: Testing instructions
+The library suites use MSTest.Sdk and Microsoft.Testing.Platform.
+The repository's `global.json` selects the test runner.
 
-## Run library tests
+## Projects
 
-The library test projects enable the MSTest executable runner.
-global.json selects Microsoft.Testing.Platform for dotnet test.
+| Project | Coverage |
+| --- | --- |
+| `PingTrace.Runtime.Tests` | Local tracing, connector selection, cancellation, failures, and service registration |
+| `PingTrace.Adapter.HttpClient.Tests` | Named clients, URI construction, response parsing, HTTP failures, and cancellation |
+| `PingTrace.AspNetCore.Tests` | Routing, response formats, validation, host error handling, and adapter-to-endpoint compatibility |
 
-Run one suite:
+The adapter-to-endpoint round-trip test currently belongs to
+`PingTrace.AspNetCore.Tests`. There is no separate
+`PingTrace.IntegrationTests` project.
 
-```powershell
-dotnet test --configuration Release -- --minimum-expected-tests 1
-```
+The Core library currently has no dedicated test project.
 
-Build the libraries, run every library suite, and pack:
+## Run one suite
 
-```powershell
-$packages = ./Build.ps1
-```
-
-Build.ps1 discovers test projects independently of library names, so it
-includes Pipeline.Transport.Tests. Any failed suite stops packaging.
-Each suite must discover at least one test.
-
-## Coverage and conventions
-
-The existing coverage.runsettings file and XPlat Code Coverage collector apply to VSTest. For a built library assembly:
+From the repository root:
 
 ```powershell
-dotnet vstest --Settings:tests/coverage.runsettings --Collect:"XPlat Code Coverage" --ResultsDirectory:TestResults
+dotnet test --project tests/PingTrace.Runtime.Tests/PingTrace.Runtime.Tests.csproj --configuration Release -- --minimum-expected-tests 1
 ```
 
-Tests use Arrange, Act, and Assert sections and pass TestContext.CancellationToken through asynchronous operations.
+Replace the project path to select another suite.
 
-## What the suites establish
+## Run all library suites
 
-## Limits
+```powershell
+$testProjects = Get-ChildItem ./tests -Recurse -Filter *.csproj
+
+foreach ($project in $testProjects) {
+    dotnet test --project $project.FullName --configuration Release -- --minimum-expected-tests 1
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Tests failed: $($project.FullName)"
+    }
+}
+```
+
+This selects projects under `tests`. It does not run the Aspire sample's
+separate test project under `SampleApplications`.
+
+## Isolation
+
+Library tests use substitutes, in-memory HTTP handlers, and ASP.NET Core
+TestServer.
+
+They do not require a running API, database, Redis instance, or Aspire host.
+
+The endpoint tests are integration tests at the ASP.NET Core boundary.
+Their in-memory hosting does not validate a deployed IIS configuration,
+real service discovery, TLS, or production authentication.
+
+## Conventions
+
+- Include Arrange, Act, and Assert sections.
+- Document public test classes and members.
+- Put relevant design justification in XML remarks.
+- Pass `TestContext.CancellationToken` to asynchronous operations.
+- Keep state local to each test to support parallel execution.
+- Use explicit completion signals instead of sleeps.
+- Avoid assertions that depend on machine speed or network latency.
+
+The current response contract is intentionally tested: local Trace returns
+an object, while destination Trace returns an array. Update the producer,
+consumer, and assertions together if that contract changes.
+
+## Validation claims
+
+A passing test run establishes the behavior covered by that run.
+Do not infer deployment readiness, package validity, or coverage percentages
+without performing the corresponding checks.

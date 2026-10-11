@@ -1,340 +1,191 @@
 # PingTrace definitions
 
-PingTrace provides application-level Ping and Trace operations for deployment
-verification, monitoring, and troubleshooting.
-
-This document describes the intended design. The implementation does not yet
-provide every capability described here.
+This page defines the current implementation. Planned capabilities are
+identified separately in [capability boundaries](../design/CAPABILITY-BOUNDARIES.md).
 
 ## Ping
 
-Ping returns a predictable string with minimal work. The default response
-is `Pong`.
+Ping returns a predictable application response. The default implementation
+returns `Pong` without invoking dependency connectors.
 
-Ping does not invoke dependencies or return diagnostic information such as
-machine names, runtime identities, or payloads.
+A successful Ping establishes that the responding application endpoint
+can answer the request. It does not establish dependency availability
+or successful business processing.
 
-A successful Ping establishes that the application endpoint responds.
-It does not establish that its dependencies are available or that a business
-operation will succeed.
+## Local Trace
 
-### HTTP HEAD support
+Local Trace describes the responding application without invoking dependencies.
 
-The ASP.NET Core adapter is intended to support both GET and HEAD on the
-Ping endpoint. Both invoke the same lightweight Ping operation. HEAD returns
-the corresponding status and headers without a response body.
+The current .NET method returns `Task<TraceResult>`. The HTTP endpoint
+returns one JSON object.
 
-This supports monitoring clients that use HEAD while keeping HTTP concerns
-outside the core PingTrace contracts. HEAD and GET share the endpoint's
-authorization policy and do not invoke dependencies.
+Local Trace provides a baseline for comparison with a destination trace.
 
-HEAD support does not imply a separate diagnostic level or a substantially
-cheaper application execution path. Monitoring systems choose the method
-and polling interval appropriate to their needs.
+## Destination Trace
 
-## Trace operations
+Destination Trace accepts either the local application name or the name
+of a registered connector. Matching is case-insensitive.
 
-All Trace operations return a collection of trace results, including a result
-for the application receiving the request.
+When the destination is the local application, the operation returns a
+collection containing one local result.
 
-### Local Trace
+When the destination identifies a connector, the runtime:
 
-Local Trace describes only the responding application. It does not invoke
-dependencies.
+1. Creates the local result.
+2. Awaits the connector.
+3. Appends the connector's results after the local result.
+4. Completes the local result.
 
-Its result collection contains one element.
+The current .NET method returns `Task<IReadOnlyList<TraceResult>>`.
+The HTTP endpoint returns a JSON array.
 
-Local Trace provides a baseline when investigating whether a delay appears
-locally or when contacting another system.
+Unknown destinations raise `KeyNotFoundException` in the default runtime.
+The HTTP destination handler translates that exception into status 404.
 
-### Destination Trace
+## Application name
 
-Destination Trace describes the local application and follows a selected
-configured dependency path.
-
-A dependency connector knows how to contact the next system and invoke its
-Trace operation. Depending on the integration, this may involve HTTP, gRPC,
-a database operation, or another protocol.
-
-A destination identifies a configured target. It is not an arbitrary network
-address supplied by the caller.
-
-An unknown destination must be reported explicitly rather than silently
-falling back to Local Trace.
-
-### Trace All
-
-Trace All describes the local application and recursively traces every
-configured dependency known to each participating application.
-
-A leaf application returns only its local result.
-
-“All” refers to configured dependencies. It does not imply network scanning
-or automatic discovery of unrelated systems.
-
-The public method syntax remains to be finalized. Separate methods are
-recommended:
-
-- `TraceAsync()` for Local Trace.
-- `TraceAsync(destination)` for Destination Trace.
-- `TraceAllAsync()` for Trace All.
-
-A distinct Trace All method makes its broader scope and greater potential
-cost visible at the call site.
-
-## Applications, instances, and destinations
-
-An application is a logical component participating in PingTrace.
-
-An instance is a running copy of an application. Multiple instances may
-share an application name.
-
-A destination is a configured target that an application knows how to invoke.
-
-PingTrace does not require an application or destination ID. The proposed
-design removes the existing `Id` properties.
-
-Destination names identify configured targets. Machine names provide
-additional information about responding instances, but are not guaranteed
-to uniquely identify a process.
-
-A future graph representation must preserve paths or parent-child
-relationships. Names and array order alone are insufficient to reconstruct
-a branching graph reliably.
-
-## Trace results
-
-A trace result contains observations reported by a participating component.
-
-| Value | Meaning | Default |
-| --- | --- | --- |
-| Name | Application name | Application assembly name |
-| Machine name | Machine reported by the responding process | `Environment.MachineName` |
-| Identity | Runtime identity reported by the responding process | `$"{Environment.UserDomainName}\\{Environment.UserName}"` |
-| Payload | Additional diagnostic information | Application assembly version |
-| Started at | Time the local trace began | Captured when tracing begins |
-| Finished at | Time the local trace completed | Captured when tracing ends |
-| Elapsed | Duration of the local trace | Measured across the operation |
-
-Assembly defaults refer to the application assembly, not the assembly
-containing the PingTrace helper.
-
-The implementation must establish how the application assembly is resolved
-and allow overrides for hosting environments where it cannot be inferred
-reliably.
-
-The payload supports an object rather than only a string. Payloads returned
-through HTTP must be serializable by the configured serializer.
-
-The reported runtime identity does not necessarily identify the credential
-used for an outgoing connection. A dependency connector may use a separate
-database credential, certificate, or access token.
-
-## Trace helpers
-
-Trace helpers provide a consistent way to construct local and composite
-results.
-
-The following examples express the intended usage. They are pseudocode,
-not examples supported by the current implementation.
-
-### Local result
-
-An application without dependencies can return a completed local trace:
-
-```text
-return TraceHelper.Trace()
-```
-
-`TraceHelper.Trace()` accepts optional overrides for:
-
-- Name, defaulting to the application assembly name.
-- Machine name, defaulting to `Environment.MachineName`.
-- Identity, defaulting to the environment domain and user name.
-- Payload, defaulting to the application assembly version.
-
-### Composite result
-
-An application invoking dependencies can begin a trace, add dependency
-results, and complete its local result:
-
-```text
-trace = TraceHelper.Begin()
-
-await trace.AddTraceAsync<DestinationA>()
-await trace.AddTraceAsync<DestinationB>()
-
-return trace.End()
-```
-
-`Begin()` accepts an optional application name and starts the local timing.
-
-`End()` accepts optional machine name, identity, and payload overrides,
-using the same defaults as the local helper. It completes the local timing
-and returns the collected results.
-
-The local result is included in the returned collection.
-
-### Dependency invocation
-
-Two dependency operations are proposed:
-
-```text
-await trace.AddTraceAsync<T>(destination)
-await trace.AddTraceAllAsync<T>()
-```
-
-`T` identifies a connector that knows how to contact a dependency.
-
-The recommended meaning of an omitted destination is to request the
-target's Local Trace. `AddTraceAllAsync<T>()` requests recursive tracing
-through that target.
-
-Connectors are resolved through dependency injection so that they can
-receive clients, database contexts, configuration, and other dependencies.
-
-The recommended initial behavior is to execute and await each dependency
-operation when it is added. Under this model, `End()` completes work that
-has already been awaited.
-
-Parallel execution remains a separate design decision.
-
-## Registration
-
-A leaf application using defaults should need only:
+The default runtime obtains its name from:
 
 ```csharp
-builder.Services.AddPingTrace();
-app.MapPingTrace();
+Assembly.GetEntryAssembly()?.GetName().Name
 ```
 
-An application requiring custom behavior can supply an implementation
-and options:
+This identifies the managed entry assembly. Test runners and specialized
+hosts may supply a different entry assembly than an application author
+expects. An unavailable entry assembly causes runtime construction to fail.
 
-```text
-builder.Services.AddPingTrace<T>(options)
-app.MapPingTrace(options)
-```
+The current registration API does not configure the application name.
+`PingTraceOptions` exists in the source but is not consumed by registration
+or the default runtime.
 
-In service registration, `T` represents the local application's PingTrace
-implementation.
+Diagnostic application IDs have been removed.
 
-In a helper's dependency invocation, `T` represents a dependency connector.
-These are distinct responsibilities.
+## Instance
 
-An options-only registration overload is also recommended so that changing
-a default does not require creating a custom implementation.
+An instance is a running copy of an application.
 
-Service options configure runtime behavior. Endpoint options configure
-HTTP exposure.
+Multiple instances may report the same application name. A machine name
+provides useful diagnostic context but does not uniquely identify a process.
 
-These examples describe the intended registration API.
+The current result model has no explicit instance identifier or parent-child
+relationship fields.
+
+## Destination name
+
+A destination name is a local alias for a configured dependency.
+
+For example, `WeatherApiClient` can identify the API dependency in the
+frontend even though the remote result reports `AspireAppSample.ApiService`.
+
+Names must be nonempty, unique without regard to case, and different from
+the local application name. The default runtime validates these rules
+when constructed.
+
+A destination name is not an arbitrary URL supplied by an HTTP caller.
+
+## Connector
+
+`IPingTraceConnector` supplies a destination name and an asynchronous method
+returning dependency results.
+
+A connector owns transport-specific communication. The runtime owns the
+calling application's result and result ordering.
+
+The runtime preserves the order returned by the connector. A connector
+can return several results, but the runtime does not infer a graph or
+automatically traverse them.
+
+## HTTP destination
+
+The built-in HTTP adapter uses a named client from `IHttpClientFactory`.
+
+Its default remote path is `/pingtrace/Trace`. It expects the remote
+endpoint to return a single local trace object with a nonempty name.
+
+The adapter wraps that object in a collection for the runtime.
+
+It does not forward the local destination alias to the remote endpoint
+and does not recursively invoke the remote application's dependencies.
+
+The adapter creates its HTTP client when tracing executes. Ping and local
+Trace do not send HTTP requests.
+
+## Trace result
+
+| Property | Current behavior |
+| --- | --- |
+| `Name` | Entry-assembly name in the default runtime |
+| `MachineName` | `Environment.MachineName` |
+| `Identity` | Environment domain and user name |
+| `Payload` | A string |
+| `StartedAt` | `DateTime.Now` captured by the result constructor |
+| `FinishedAt` | `DateTime.Now` captured by `Finish(string)` |
+| `Elapsed` | `FinishedAt - StartedAt` |
+
+The default local payload is `Pong`. For a connector destination, the
+default runtime's local payload is `Pong [destination]`.
+
+The current payload is not an object and does not default to the assembly
+version.
+
+The reported runtime identity does not necessarily identify credentials
+used for outgoing authentication.
 
 ## Timing
 
-Local Trace measures local diagnostic work.
+A destination trace's local duration includes the awaited connector call.
+It does not measure the entire HTTP request from arrival through final
+response serialization.
 
-A composite trace includes the time spent awaiting its dependencies.
-Parent and child elapsed times therefore overlap and must not simply
-be added together.
+Parent and child durations overlap and must not simply be added together.
 
-Elapsed time is not a direct measurement of network latency. It can include:
+Network transit, authentication, connection establishment, serialization,
+remote work, and HTTP resilience policies may affect observed duration.
 
-- Connection establishment.
-- Authentication.
-- Request and response serialization.
-- Network transit.
-- Queuing and scheduling.
-- Remote processing.
+The current calculation uses wall-clock timestamps. A monotonic duration
+measurement is a proposed improvement; it is not implemented.
 
-Comparing Local Trace with Destination Trace helps narrow an investigation.
-Separate probes can help identify which dependency path introduces delay.
+## Registration builder
 
-Differences between independent probes remain estimates because workload
-and connection state may change between requests.
+`AddPingTrace()` registers the default implementation with a scoped lifetime,
+unless an `IPingTrace` implementation is already registered.
 
-A monotonic timer is recommended for elapsed duration. Start and finish
-timestamps provide time context, but system-clock adjustments should not
-change the measured duration.
+Its optional callback receives a `PingTraceBuilder` during startup.
+Adapters use the builder's service collection to register dependencies.
 
-## Recursive execution
+The callback does not execute trace operations or configure
+`PingTraceOptions`.
 
-Trace All must account for dependency graphs that contain cycles or shared
+## Endpoint mapping
+
+`MapPingTrace()` maps GET endpoints under `/pingtrace`.
+
+A string argument changes the prefix:
+
+```csharp
+app.MapPingTrace("/diagnostics");
+```
+
+It returns a route group to which the host can apply endpoint conventions.
+Authorization applied to that group affects both Ping and Trace.
+
+Explicit HEAD support, mapping-options objects, and separate authorization
+builders are not implemented.
+
+## Trace All
+
+Trace All is the planned operation that recursively visits configured
 dependencies.
 
-For example, `A → B → A` contains a cycle. The paths `A → B → D` and
-`A → C → D` share a dependency but do not necessarily contain a cycle.
+No Trace All method or endpoint currently exists.
 
-Before recursive execution is implemented, the design must define:
+Before implementation, the design must define cycle handling, traversal
+limits, cancellation propagation, shared dependencies, and partial failures.
 
-- How traversal context is propagated between applications.
-- How cycles are detected and reported.
-- How execution depth and duration are bounded.
-- How cancellation is propagated.
-- How dependency failures and partial results are represented.
-- Whether shared dependencies are invoked once per path or once per traversal.
+## Monitoring policy
 
-These policies must work across process boundaries, not only within
-one application's helper.
+PingTrace provides responses and diagnostic observations.
 
-## Authorization
-
-Ping returns a fixed response without diagnostic details and is intended
-to support anonymous monitoring.
-
-Trace and Trace All expose machine names, runtime identities, and potentially
-sensitive payloads. Destination discovery can also expose application
-topology.
-
-Hosts should be able to protect diagnostic endpoints independently of Ping,
-using familiar ASP.NET Core conventions such as `RequireAuthorization()`.
-
-Endpoint mapping does not itself configure an authentication scheme or
-create an authorization policy.
-
-The exact mapping API remains to be finalized.
-
-## Relationship to Health Checks
-
-PingTrace complements health checks by reporting diagnostic observations.
-
-Health checks interpret observations according to application policy and
-produce a health classification.
-
-PingTrace should follow familiar dependency-injection, typed-registration,
-and endpoint-configuration patterns.
-
-Integration with `IHealthCheck` remains under consideration. An optional
-adapter is recommended initially so that health classification does not
-become a mandatory responsibility of every PingTrace implementation.
-
-Such an adapter must explicitly define which trace operation it invokes
-and how it interprets failures or unexpected results.
-
-## Database integration
-
-A database connector may verify connectivity or invoke a diagnostic
-operation implemented by the database.
-
-An Entity Framework Core integration is a useful candidate because it can
-use the application's configured `DbContext`.
-
-Connectivity verification alone does not provide the database server's
-machine name, execution identity, or diagnostic payload.
-
-A richer database trace may require a dedicated query or stored procedure.
-The connector must distinguish observations made by the caller from
-information returned by the database.
-
-## Monitoring and on-demand investigation
-
-Ping supports frequent, inexpensive polling.
-
-Trace All supports broader dependency verification at an interval appropriate
-to its cost.
-
-Additional destination probes used to investigate individual paths or build
-a latency visualization belong to an explicit on-demand workflow.
-
-PingTrace supplies responses and observations. Monitoring systems own
-schedules, thresholds, notifications, and recovery actions.
+The application or monitoring system defines polling schedules, expected
+values, thresholds, health classifications, notifications, and recovery
+actions.

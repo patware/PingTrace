@@ -2,203 +2,236 @@
 
 **Is it responding? Where is it running? What is it reaching?**
 
-PingTrace brings the idea behind ping and traceroute into your applications:
-a lightweight response to confirm that an application endpoint is reachable,
-and diagnostic results to help identify the systems involved in a request.
+PingTrace brings application-level Ping and Trace operations to .NET
+applications. Use it to verify deployments, identify unexpected destinations,
+and investigate delays between application components.
 
-Use it to verify deployments, investigate unexpected destinations, and narrow
-down delays between application components.
+A lightweight Ping confirms that an application endpoint responds.
+A Trace reports the application name, machine, runtime identity, timing,
+and a diagnostic payload.
 
-## Why PingTrace?
+## Start with two calls
 
-An application can be running and still be pointing to the wrong backend,
-using an unexpected identity, or waiting on a slow connection.
-
-PingTrace helps answer practical questions:
-
-- Does this application endpoint respond with the expected value?
-- Which machine handled the request?
-- Which runtime identity does the application report?
-- Did the request reach the expected application or dependency?
-- Where should I investigate an unexpected delay?
-
-The same diagnostic endpoints can serve both monitoring tools and developers
-investigating a deployment.
-
-## Ping and Trace
-
-| Operation | Purpose |
-| --- | --- |
-| **Ping** | Return a predictable string with minimal work. The default implementation returns `Pong`. |
-| **Trace** | Return diagnostic information about the application handling the request. |
-| **Trace(destination)** | Return diagnostic information from the local application and a selected registered destination handler. |
-
-A trace result contains an application identifier and name, machine name,
-runtime identity, start and finish times, elapsed time, and a payload.
-
-The default local trace does not contact dependencies. A destination trace
-invokes the selected handler, which can return results from downstream systems.
-
-This distinction is useful during troubleshooting: compare a local trace with
-a destination trace to determine whether the delay appears when a dependency
-is involved.
-
-## Get started with ASP.NET Core
-
-The current libraries target .NET 10. Reference both `PingTrace.Runtime` and
-`PingTrace.AspNetCore` from your ASP.NET Core application.
-
-Register the runtime and map the endpoints in `Program.cs`:
+In an ASP.NET Core application referencing `PingTrace.Runtime` and
+`PingTrace.AspNetCore`:
 
 ```csharp
-using Microsoft.AspNetCore.Builder;
 using PingTrace.AspNetCore;
 using PingTrace.Runtime;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddPingTrace(options =>
-{
-    options.Id = Guid.Parse("C21DC569-5A97-41D4-A8EF-64A6C48BFB97");
-    options.Name = "CustomerPortal";
-});
+builder.Services.AddPingTrace();
 
-WebApplication app = builder.Build();
+var app = builder.Build();
 
 app.MapPingTrace();
 
 app.Run();
 ```
 
-Choose an application identifier once and retain it across restarts so that
-trace results can be associated with the same logical application.
+The libraries currently target .NET 10.
 
-The default route prefix is `/pingtrace`:
-
-| Request | Current response |
+| Request | Response |
 | --- | --- |
 | `GET /pingtrace/Ping` | Plain text: `Pong` |
-| `GET /pingtrace/Trace` | One JSON trace-result object describing the local application |
-| `GET /pingtrace/Trace?destination=CustomerPortal` | A JSON array containing the local application's result |
-| `GET /pingtrace/Trace?destination=Database1` | A JSON array containing the local result followed by results from a registered `Database1` handler |
+| `GET /pingtrace/Trace` | One JSON object describing the local application |
+| `GET /pingtrace/Trace?destination=NAME` | A JSON array containing the local result and results from the selected destination |
 
-The example registers no downstream handlers. To support `Database1` or
-another dependency, implement `IPingTraceDestination` and register it with
-`AddPingTraceDestination<TDestination>()`.
+The default application name comes from the managed host's entry assembly.
+No application ID or configuration callback is required.
 
-Destination names are matched without regard to case by the default runtime.
+Ping and local Trace do not invoke dependencies.
 
-To use a different route prefix:
+## Add an HTTP dependency
+
+Reference `PingTrace.Adapter.HttpClient` and register a destination:
 
 ```csharp
-app.MapPingTrace("/diagnostics");
+using PingTrace.Adapter.HttpClient;
+using PingTrace.AspNetCore;
+using PingTrace.Runtime;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddPingTrace(pingTrace =>
+{
+    pingTrace.AddHttpDestination("ApiService", client =>
+    {
+        client.BaseAddress = new Uri("https://api.example.com/");
+    });
+});
+
+var app = builder.Build();
+
+app.MapPingTrace();
+
+app.Run();
 ```
 
-Trace responses include machine and runtime identity information. Configure
-access through the hosting application's authentication, authorization, and
-network policies.
+Replace the example address with your API's address. The API must also
+register and map PingTrace.
 
-## Fit the check to the question
-
-Different checks have different costs. These intervals illustrate the intended
-usage model; PingTrace does not schedule probes or enforce polling intervals.
-
-| Level | Example interval | Question | PingTrace scope |
-| --- | --- | --- | --- |
-| A | Every second | Does a minimal endpoint respond? | Explicit HEAD support is under consideration. |
-| B | Every 10 seconds | Is the application responding? | Ping returns a predictable string. |
-| C | Every minute | Can the application reach its dependencies? | Destination Trace provides the current extension point; whole-graph traversal is a design goal. |
-| D | Every hour | Can a representative business operation be evaluated safely? | Application-owned synthetic or what-if checks, outside the initial scope. |
-
-Select intervals and timeouts according to the application and the cost of
-its dependencies. A trace that fans out across several systems costs more
-than a local response.
-
-PingTrace complements .NET Health Checks, Docker HEALTHCHECK, and Kubernetes
-liveness and readiness probes. It supplies diagnostic responses that an
-application or monitoring integration can interpret. The host and monitoring
-system decide thresholds, health policy, notifications, and recovery actions.
-
-## Verify deployments one layer at a time
-
-Simple diagnostic resources can help isolate deployment problems:
-
-| Resource | What a successful request helps establish |
-| --- | --- |
-| `ping.html` | The requested static HTML resource can be served through the configured hosting path. |
-| `ping.png` | The requested image resource can be served with the expected content type. |
-| An application Ping endpoint | The request reaches application code and receives the expected response. |
-| A local Trace | The responding application reports its machine, runtime identity, and payload. |
-| A destination Trace | The configured destination handler runs and returns its diagnostic results. |
-
-These checks provide evidence about the path exercised by that request.
-For identity and file-permission investigations, account for caching, proxies,
-and the identity actually used to access the resource.
-
-The same approach can be implemented through other technologies: `ping.asp`,
-`ping.aspx`, a database procedure, or a gRPC service. Those are integration
-patterns; this repository currently provides the .NET contracts, runtime,
-and ASP.NET Core endpoint adapter.
-
-## Investigate unexpected delays
-
-Consider an application chain:
+Request:
 
 ```text
-Frontend → Backend → Database
+GET /pingtrace/Trace?destination=ApiService
 ```
 
-If tracing from the frontend becomes slow:
+The frontend invokes the API's `/pingtrace/Trace` endpoint and returns:
 
-1. Trace the frontend locally.
-2. Trace the backend locally.
-3. Trace from the backend toward the database.
-4. Compare with a diagnostic request made directly to the database.
+```text
+Frontend result
+API result
+```
 
-Fast local responses combined with a slow destination trace help narrow the
-investigation to the dependency call and the work around it.
+`ApiService` is a local destination alias. The remote result retains the
+remote application's own name.
 
-A node's elapsed time includes the downstream work it awaits. It is not a
-direct measurement of network latency. Authentication, connection setup,
-serialization, and scheduling can also contribute to the observed delay.
+The built-in HTTP adapter requests a local trace from the remote application.
+It does not automatically trace that application's dependencies.
+
+The registration callback receives a `PingTraceBuilder` for registering
+adapters. It is not an application-options callback.
+
+## Try the Aspire sample
+
+The repository includes a Blazor frontend and an API service.
+
+The frontend registers its API dependency using the same service address
+as its weather client:
+
+```csharp
+builder.Services.AddPingTrace(pingTrace =>
+{
+    pingTrace.AddHttpDestination(nameof(WeatherApiClient), client =>
+    {
+        client.BaseAddress = apiServiceUri;
+    });
+});
+```
+
+With the sample running, open the frontend's:
+
+```text
+/pingtrace/Trace?destination=WeatherApiClient
+```
+
+The sample configures Aspire service discovery for its HTTP clients.
+Its `https+http://apiservice` address relies on that configuration.
+
+See [development setup](docs/development/GETTING-STARTED.md).
+
+## Diagnose deployments
+
+PingTrace helps answer practical questions:
+
+- Is application code receiving the request?
+- Which application and machine responded?
+- Which runtime identity does the process report?
+- Does the configured dependency point to the expected system?
+- Does an unexpected delay appear when a dependency is involved?
+
+Static resources can complement these checks. An application-supplied
+`ping.html` can help verify static-file delivery; an image can help verify
+delivery with the expected content type. Application Ping then exercises
+the application endpoint.
+
+Each check provides evidence about the request path it exercises. Proxies,
+caching, and the identity used for file access affect what that evidence
+establishes.
+
+Classic ASP pages, Web Forms pages, database procedures, and gRPC operations
+are other ways to apply the same diagnostic approach. They are not all
+provided as adapters by this repository.
+
+## Understand the timing
+
+For a destination trace, the local result includes the time spent awaiting
+the dependency. Parent and child durations overlap.
+
+Elapsed time is not a direct measurement of network latency. Authentication,
+connection setup, serialization, retries, and remote processing can
+contribute to it.
+
+Compare local and destination traces to narrow the investigation.
+For example, a fast backend local trace and a slow backend-to-database
+diagnostic call point toward work associated with that dependency call.
+
+## Fit the probe to its purpose
+
+These intervals illustrate the intended usage model. PingTrace does not
+schedule probes.
+
+| Level | Example interval | Purpose | Current position |
+| --- | --- | --- | --- |
+| A | Every second | Minimal HTTP response | Explicit HEAD support is planned for the HTTP adapter. |
+| B | Every 10 seconds | Confirm application response | Ping is implemented. |
+| C | Every minute | Verify dependency connectivity | Named destination tracing is implemented; recursive Trace All is planned. |
+| D | Every hour | Exercise representative business behavior safely | Application-owned synthetic checks are outside the initial scope. |
+
+Choose intervals according to the cost of the participating systems.
+
+PingTrace complements .NET Health Checks, Docker HEALTHCHECK, and Kubernetes
+probes. Monitoring systems and applications own health policy, thresholds,
+notifications, and recovery actions.
 
 ## Libraries
 
 | Library | Responsibility |
 | --- | --- |
-| **PingTrace.Core** | Contracts and models for Ping, Trace. |
-| **PingTrace.Runtime** | Default implementation, application options, and dependency-injection registration. |
-| **PingTrace.AspNetCore** | HTTP endpoint mapping for Ping, Trace |
+| `PingTrace.Core` | Contracts and trace results |
+| `PingTrace.Runtime` | Default execution and dependency-injection registration |
+| `PingTrace.AspNetCore` | HTTP endpoint mapping |
+| `PingTrace.Adapter.HttpClient` | Invocation of remote HTTP Trace endpoints |
 
+Registration belongs to Runtime so non-HTTP hosts can use it. HTTP routing
+belongs to AspNetCore. Outgoing communication belongs to adapters.
 
-## Direction
+## Endpoint access
 
-The intended adoption experience is simple service registration and endpoint
-mapping, with predictable responses for monitoring tools.
+Trace responses expose machine names, runtime identities, and payloads.
+The host controls authentication and authorization.
 
-Areas planned for further design include:
+The current mapping returns a route group:
 
-- A consistent array response for both local and destination Trace endpoints.
-- Convenient registration defaults.
-- Controlled traversal of known application dependencies.
-- Explicit HEAD endpoint support, if justified by the monitoring use cases.
-- A Blazor component showing results as a log, table, or dependency graph.
-- On-demand destination probes to help investigate delays along individual paths.
+```csharp
+app.MapPingTrace().RequireAuthorization();
+```
 
-A graphical investigation may require separate probes for paths such as
-`A`, `A → B`, `A → B → C`, and `A → E`. That additional work belongs in an
-on-demand diagnostic workflow rather than automatically increasing the cost
-of routine monitoring.
+With authentication and authorization configured by the host, this protects
+both Ping and Trace. Separate anonymous Ping and protected Trace mapping
+is a future API improvement.
 
-These items describe the direction of the project, not completed features.
+## Current boundaries and direction
 
-## Documentation and contributing
+The current implementation supports Ping, local Trace, named destination
+Trace, and HTTP dependencies.
 
-The documentation is being developed alongside the library:
+Version 1 excludes destination discovery.
+
+Further work includes:
+
+- Recursive Trace All with bounded execution and cycle handling.
+- A consistent collection response for all Trace operations.
+- Structured payloads and an application-version default.
+- Helpers for constructing local and composite traces.
+- Explicit HTTP HEAD support on Ping.
+- An Entity Framework Core adapter using the application's configured context.
+- Optional Health Checks integration.
+- A Blazor viewer for diagnostic results and dependency paths.
+
+On-demand path probes may support richer latency investigations, but they
+cost more than a single routine probe.
+
+See [capability boundaries](docs/design/CAPABILITY-BOUNDARIES.md) for the
+distinction between implemented behavior and planned work.
+
+## Documentation
 
 - [Documentation home](docs/index.md)
+- [Definitions](docs/architecture/PINGTRACE-DEFINITIONS.md)
 - [Architecture](docs/architecture/ARCHITECTURE.md)
-- [Capability boundaries](docs/design/CAPABILITY-BOUNDARIES.md)
-- [Development setup](docs/development/GETTING-STARTED.md)
+- [Testing](tests/README.md)
 - [Contributing](CONTRIBUTING.md)
 - [License](LICENSE)

@@ -1,13 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<ProjectGuid>{0C942059-0EFB-4E2A-AA4F-39A4728F2AB7}</ProjectGuid>
-		<AssemblyTitle>PingTrace.Core</AssemblyTitle>
-		<Product>PingTrace.Core</Product>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ProjectGuid>{0C942059-0EFB-4E2A-AA4F-39A4728F2AB7}</ProjectGuid>
+    <AssemblyTitle>PingTrace.Core</AssemblyTitle>
+    <Product>PingTrace.Core</Product>
     <RootNamespace>PingTrace.Core</RootNamespace>
-		<Copyright>Copyright (c) 2026 Patrice Calvé</Copyright>
-		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-	</PropertyGroup>
+    <Copyright>Copyright (c) 2026 Patrice Calvé</Copyright>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
