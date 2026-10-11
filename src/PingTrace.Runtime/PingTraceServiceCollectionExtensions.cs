@@ -1,46 +1,40 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 
 using PingTrace.Core;
 
 namespace PingTrace.Runtime;
 
+/// <summary>
+/// Provides registration methods for the PingTrace runtime.
+/// </summary>
 public static class PingTraceServiceCollectionExtensions
 {
-    public static IServiceCollection AddPingTrace(this IServiceCollection services, Action<PingTraceOptions> configure)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
-
-        services
-          .AddOptions<PingTraceOptions>()
-          .Configure(configure)
-          .Validate(
-            options => !string.IsNullOrWhiteSpace(options.Name),
-            "An application name is required.")
-          .ValidateOnStart();
-
-        services.TryAddScoped<IPingTrace>(provider =>
-        {
-            PingTraceOptions options = provider
-        .GetRequiredService<IOptions<PingTraceOptions>>()
-        .Value;
-
-            IEnumerable<IPingTraceDestination> destinations = provider.GetServices<IPingTraceDestination>();
-
-            return new DefaultPingTrace(options, destinations);
-        });
-
-        return services;
-    }
-
-    public static IServiceCollection AddPingTraceDestination<TDestination>(this IServiceCollection services)
-      where TDestination : class, IPingTraceDestination
+    /// <summary>
+    /// Registers the default PingTrace runtime and optional dependencies.
+    /// </summary>
+    /// <param name="services">
+    /// The service collection receiving the registrations.
+    /// </param>
+    /// <param name="configure">
+    /// An optional callback that registers dependency adapters.
+    /// </param>
+    /// <returns>The service collection for further registration.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="services"/> is <see langword="null"/>.
+    /// </exception>
+    /// <remarks>
+    /// The callback executes during registration, before the service
+    /// provider is built. An existing IPingTrace registration is preserved.
+    /// Omitting the callback registers a default leaf implementation.
+    /// </remarks>
+    public static IServiceCollection AddPingTrace(this IServiceCollection services, Action<PingTraceBuilder>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPingTraceDestination, TDestination>());
+        services.TryAddScoped<IPingTrace, DefaultPingTrace>();
+
+        configure?.Invoke(new PingTraceBuilder(services));
 
         return services;
     }

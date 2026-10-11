@@ -166,12 +166,10 @@ serialization, and scheduling can also contribute to the observed delay.
 
 | Library | Responsibility |
 | --- | --- |
-| **PingTrace.Core** | Contracts and models for Ping, Trace, destinations, and discovery. |
+| **PingTrace.Core** | Contracts and models for Ping, Trace. |
 | **PingTrace.Runtime** | Default implementation, application options, and dependency-injection registration. |
-| **PingTrace.AspNetCore** | HTTP endpoint mapping for Ping, Trace, and optional destination discovery. |
+| **PingTrace.AspNetCore** | HTTP endpoint mapping for Ping, Trace |
 
-Discovery is separate from the basic Ping and Trace endpoints. Mapping
-discovery also requires an application-provided `IDiscovery` implementation.
 
 ## Direction
 

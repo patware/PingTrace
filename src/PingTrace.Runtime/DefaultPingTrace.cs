@@ -1,48 +1,94 @@
+using System.Reflection;
+
 using PingTrace.Core;
 
 namespace PingTrace.Runtime;
 
+/// <summary>
+/// Provides local diagnostics and invokes explicitly registered dependencies.
+/// </summary>
+/// <remarks>
+/// Ping and local Trace do not invoke connectors. Destination Trace includes
+/// the local result followed by the selected connector's results.
+/// </remarks>
 public sealed class DefaultPingTrace : IPingTrace
 {
-    private readonly string _name;
-    private readonly Dictionary<string, IPingTraceDestination> _destinations;
+    private readonly string _name =
+        Assembly.GetEntryAssembly()?.GetName().Name
+        ?? throw new InvalidOperationException(
+            "The host assembly name could not be determined.");
 
-    public DefaultPingTrace(PingTraceOptions options, IEnumerable<IPingTraceDestination> destinations)
+    private readonly Dictionary<string, IPingTraceConnector> _connectors;
+
+    /// <summary>
+    /// Initializes a default implementation without dependencies.
+    /// </summary>
+    public DefaultPingTrace() : this(Array.Empty<IPingTraceConnector>())
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(destinations);
-        ArgumentException.ThrowIfNullOrWhiteSpace(options.Name);
-
-        _name = options.Name;
-        _destinations = new(StringComparer.OrdinalIgnoreCase);
-
-        foreach (IPingTraceDestination destination in destinations)
-        {
-            ArgumentNullException.ThrowIfNull(destination);
-            ArgumentException.ThrowIfNullOrWhiteSpace(destination.Name);
-
-            if (string.Equals(destination.Name, _name, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException(
-                  $"Destination '{destination.Name}' conflicts with the application name.",
-                  nameof(destinations));
-            }
-
-            if (!_destinations.TryAdd(destination.Name, destination))
-            {
-                throw new ArgumentException(
-                  $"Destination '{destination.Name}' is registered more than once.",
-                  nameof(destinations));
-            }
-        }
-
     }
 
+    /// <summary>
+    /// Initializes a default implementation with configured dependencies.
+    /// </summary>
+    /// <param name="connectors">
+    /// The connectors available to this application.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// The collection or one of its connectors is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// A connector name is empty, duplicates another name, or conflicts
+    /// with the local application name.
+    /// </exception>
+    /// <remarks>
+    /// Names are compared without regard to case. Rejecting ambiguous names
+    /// prevents a request from silently selecting the wrong dependency.
+    /// Connector constructors should not perform network operations.
+    /// </remarks>
+    public DefaultPingTrace(IEnumerable<IPingTraceConnector> connectors)
+    {
+        ArgumentNullException.ThrowIfNull(connectors);
+
+        _connectors = new Dictionary<string, IPingTraceConnector>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (IPingTraceConnector connector in connectors)
+        {
+            ArgumentNullException.ThrowIfNull(connector);
+            ArgumentException.ThrowIfNullOrWhiteSpace(connector.Name);
+
+            if (string.Equals(connector.Name, _name, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException(
+                    $"Destination '{connector.Name}' conflicts with " +
+                    "the local application name.",
+                    nameof(connectors));
+            }
+
+            if (!_connectors.TryAdd(connector.Name, connector))
+            {
+                throw new ArgumentException(
+                    $"Destination '{connector.Name}' is registered more than once.",
+                    nameof(connectors));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the predictable application response.
+    /// </summary>
+    /// <returns>The string <c>Pong</c>.</returns>
     public string Ping()
     {
         return "Pong";
     }
 
+    /// <summary>
+    /// Returns diagnostic information about this application.
+    /// </summary>
+    /// <param name="cancellationToken">
+    /// The token used to cancel the operation.
+    /// </param>
+    /// <returns>The completed local trace result.</returns>
     public Task<TraceResult> TraceAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -53,30 +99,52 @@ public sealed class DefaultPingTrace : IPingTrace
         return Task.FromResult(current);
     }
 
+    /// <summary>
+    /// Traces this application and the selected destination.
+    /// </summary>
+    /// <param name="destination">
+    /// The local application name or a registered destination name.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The token used to cancel the operation.
+    /// </param>
+    /// <returns>
+    /// The local result followed by any dependency results.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// The destination is empty or consists only of whitespace.
+    /// </exception>
+    /// <exception cref="KeyNotFoundException">
+    /// The destination is not registered and is not the local application.
+    /// </exception>
+    /// <remarks>
+    /// The local result is completed after the dependency responds so its
+    /// elapsed time includes the dependency call. Connector failures and
+    /// cancellation propagate to the caller.
+    /// </remarks>
     public async Task<IReadOnlyList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
 
-        bool isLocal = string.Equals(destination, _name, StringComparison.OrdinalIgnoreCase);
-
-        IPingTraceDestination? handler = null;
-
-        if (!isLocal && !_destinations.TryGetValue(destination, out handler))
+        if (string.Equals(destination, _name, StringComparison.OrdinalIgnoreCase))
         {
-            throw new KeyNotFoundException($"Unknown trace destination '{destination}'.");
+            TraceResult local = await TraceAsync(cancellationToken);
+            return new[] { local };
+        }
+
+        if (!_connectors.TryGetValue(destination, out IPingTraceConnector? connector))
+        {
+            throw new KeyNotFoundException(
+                $"Unknown trace destination '{destination}'.");
         }
 
         TraceResult current = CreateLocalResult();
 
-        List<TraceResult> results = [current];
+        IReadOnlyList<TraceResult> downstream = await connector.TraceAsync(cancellationToken);
 
-        if (handler is not null)
-        {
-            IReadOnlyList<TraceResult> downstream = await handler.TraceAsync(cancellationToken);
-
-            results.AddRange(downstream);
-        }
+        List<TraceResult> results = new() { current };
+        results.AddRange(downstream);
 
         current.Finish($"Pong [{destination}]");
 
@@ -85,12 +153,11 @@ public sealed class DefaultPingTrace : IPingTrace
 
     private TraceResult CreateLocalResult()
     {
-        return new TraceResult()
+        return new TraceResult
         {
             Name = _name,
             MachineName = Environment.MachineName,
             Identity = $"{Environment.UserDomainName}\\{Environment.UserName}"
         };
     }
-
 }
