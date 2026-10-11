@@ -94,7 +94,11 @@ public sealed class DefaultPingTrace : IPingTrace
         cancellationToken.ThrowIfCancellationRequested();
 
         TraceResult current = CreateLocalResult();
-        current.Finish("Pong");
+
+        var payload = Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+            ?? "Pong";
+
+        current.Finish(payload);
 
         return Task.FromResult(current);
     }
@@ -146,7 +150,10 @@ public sealed class DefaultPingTrace : IPingTrace
         List<TraceResult> results = new() { current };
         results.AddRange(downstream);
 
-        current.Finish($"Pong [{destination}]");
+        var v = Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+                    ?? "Pong";
+
+        current.Finish($"{v} --> [{destination}]");
 
         return results;
     }
