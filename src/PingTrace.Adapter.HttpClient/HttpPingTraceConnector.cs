@@ -54,6 +54,6 @@ internal sealed class HttpPingTraceConnector : IPingTraceConnector
                 $"HTTP destination '{Name}' returned no valid named trace result.");
         }
 
-        return new[] { result };
+        return [result];
     }
 }

@@ -215,7 +215,7 @@ public sealed class PingTraceEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         results.Should().NotBeNull();
         results!.Should().HaveCount(2);
-        results[0].Payload.Should().Be("Pong [ApiService]");
+        results[0].Payload.Should().Be("0.0.1.0 --> [ApiService]");
         results[1].Name.Should().Be("RemoteApi");
         results[1].MachineName.Should().Be("remote-machine");
         results[1].Identity.Should().Be("remote-identity");

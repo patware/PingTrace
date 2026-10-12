@@ -1,3 +1,8 @@
+using AspireAppSample.ApiService;
+
+using Microsoft.EntityFrameworkCore;
+
+using PingTrace.Adapter.EntityFramework;
 using PingTrace.AspNetCore;
 using PingTrace.Runtime;
 
@@ -12,7 +17,23 @@ builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddPingTrace();
+var connectionString = builder.Configuration.GetConnectionString("ApiService");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'ApiService' is missing or empty.");
+}
+
+builder.Services.AddDbContext<ApiServiceDbContext>(options =>
+{
+    options.UseSqlServer(connectionString);
+});
+
+builder.Services.AddPingTrace(pingTrace =>
+{
+    pingTrace.AddDbContextDestination<ApiServiceDbContext>("ApiServiceDb");
+});
 
 var app = builder.Build();
 
