@@ -16,6 +16,7 @@ The default operations expose different amounts of information:
 | Ping | The fixed string `Pong` |
 | Local Trace | Application name, machine name, runtime identity, timestamps, elapsed time, and payload |
 | Destination Trace | Local observations followed by dependency observations |
+| TraceAll | Local observations followed by recursive dependency results |
 
 Ping is intended to support inexpensive anonymous monitoring.
 
@@ -28,7 +29,7 @@ its own observations.
 
 ## Current endpoint authorization
 
-`MapPingTrace()` maps Ping and Trace into one route group.
+`MapPingTrace()` maps Ping, Trace, and both TraceAll endpoints into one route group.
 
 It does not add `RequireAuthorization()` or `AllowAnonymous()` metadata.
 Access therefore depends on the host's policies and surrounding infrastructure.
@@ -40,7 +41,7 @@ app.MapPingTrace()
     .RequireAuthorization("PingTraceReaders");
 ```
 
-This protects both Ping and Trace.
+This protects all mapped PingTrace endpoints.
 
 The host must register the named policy and configure a suitable
 authentication scheme and authorization pipeline. The mapping call does
@@ -51,7 +52,7 @@ default authorization policy.
 
 An endpoint without explicit authorization metadata can still be protected
 by a host fallback policy. Conversely, applying `AllowAnonymous()` to the
-whole PingTrace group bypasses endpoint authorization for both operations.
+whole PingTrace group bypasses endpoint authorization for all mapped operations.
 
 See [ASP.NET Core authorization policies](https://learn.microsoft.com/en-us/aspnet/core/security/authorization/policies?view=aspnetcore-10.0)
 for the framework's policy behavior.
@@ -240,8 +241,16 @@ application and its dependencies.
 Cancellation is propagated through the runtime and built-in HTTP adapter,
 but custom connectors must cooperate with it.
 
-Trace All is not implemented. Its future design must account for the cost
-of recursive calls and cycle handling.
+TraceAll recursively invokes explicitly registered dependencies. The default
+runtime detects repeated node identities on each path, limits traversal depth,
+and applies a cooperative execution deadline.
+
+These controls do not impose a separate maximum result count, request count,
+or request rate. Hosts remain responsible for endpoint authorization and
+appropriate usage limits. Custom connectors must honor cancellation.
+
+Both TraceAll endpoints belong to the group returned by `MapPingTrace`, so
+authorization applied to that group also applies to recursive requests.
 
 ## Custom implementation responsibilities
 

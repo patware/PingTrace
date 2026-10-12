@@ -46,6 +46,8 @@ The default route prefix is `/pingtrace`.
 | `GET /pingtrace/Ping` | Plain-text response from `IPingTrace.Ping()`. |
 | `GET /pingtrace/Trace` | One JSON trace object. |
 | `GET /pingtrace/Trace?destination=NAME` | A JSON array of trace results. |
+| `GET /pingtrace/TraceAll` | Starts a recursive traversal and returns a JSON array. |
+| `POST /pingtrace/TraceAll` | Continues traversal from a JSON `TraceAllRequest` and returns a JSON array. |
 
 Successful responses use HTTP status `200`.
 
@@ -105,6 +107,20 @@ parameter, not on the number of returned results.
 
 URL-encode destination names when constructing requests.
 
+### Recursive TraceAll
+
+GET starts traversal using the runtime defaults: eight connector hops and a
+thirty-second cooperative deadline. POST accepts the remaining depth, absolute
+deadline, and ancestor path forwarded by another application. Both return an
+array even when the application has no destinations.
+
+The runtime invokes recursive connectors with that context and other connectors
+as leaves. Cycles, exhausted depth, cancellation, and dependency failures stop
+traversal rather than returning partial success. See the
+[execution guide](https://github.com/patware/Patware.PingTrace/blob/main/docs/architecture/PINGTRACE.md#recursive-traceall).
+
+The `destination` query parameter applies to Trace, not TraceAll.
+
 ## Register an HTTP dependency
 
 Also reference `PingTrace.Adapter.HttpClient`:
@@ -132,7 +148,8 @@ app.Run();
 ```
 
 Replace the example address with the API's address. The remote application
-must expose a compatible local Trace endpoint.
+must expose a compatible local Trace endpoint for named tracing and a recursive
+TraceAll endpoint for recursive tracing.
 
 Requesting `/pingtrace/Trace?destination=ApiService` invokes that dependency.
 The built-in HTTP adapter requests `/pingtrace/Trace` on the remote application;
@@ -155,12 +172,14 @@ This maps:
 GET /diagnostics/Ping
 GET /diagnostics/Trace
 GET /diagnostics/Trace?destination=NAME
+GET /diagnostics/TraceAll
+POST /diagnostics/TraceAll
 ```
 
 That invocation does not also map the default `/pingtrace` routes.
 
 When a remote application uses a custom prefix, configure its HTTP connector's
-`tracePath` to match the remote Trace route.
+`tracePath` and `traceAllPath` to match the remote routes. The paths are independent.
 
 ## Authorization
 
@@ -174,7 +193,7 @@ app.MapPingTrace()
     .RequireAuthorization();
 ```
 
-This protects both Ping and Trace using the application's default
+This protects Ping, Trace, and both TraceAll endpoints using the application's default
 authorization policy.
 
 To use an existing named policy:
@@ -211,6 +230,7 @@ the deployment and keep secrets out of diagnostic payloads.
 | Destination parameter is absent | Invokes local Trace. |
 | Destination is empty or whitespace | Returns `400` with the JSON string `"Destination must not be empty."`. |
 | Named Trace throws `KeyNotFoundException` | Returns `404` with the JSON string `"The requested destination is not known."`. |
+| TraceAll POST contains invalid traversal state | Returns `400` before invoking the runtime. |
 | Other implementation or connector failure | Propagates to the host's exception handling. |
 
 With the default runtime, an unknown destination produces
@@ -220,10 +240,12 @@ The endpoint catches that exception type from the entire named Trace call.
 A custom implementation or connector throwing the same exception will
 therefore also produce the `404` response.
 
-Other failures do not have a package-defined error body or status mapping.
-Configure exception handling in the hosting application.
+Request-body binding handles malformed or missing JSON. An empty JSON object
+uses the request type's defaults. Other failures, including cycles, exhausted
+depth, and deadline expiry, do not have a package-defined error body or status
+mapping. Configure exception handling in the hosting application.
 
-Both Trace paths pass `HttpContext.RequestAborted` to the implementation.
+All Trace and TraceAll paths pass `HttpContext.RequestAborted` to the implementation.
 Downstream cancellation depends on the implementation and connector honoring
 that token.
 
@@ -240,9 +262,9 @@ using PingTrace alongside them.
 
 ## Current scope
 
-This package maps GET endpoints for Ping and Trace.
+This package maps GET endpoints for Ping, Trace, and TraceAll, plus POST TraceAll.
 
-It does not explicitly map an HTTP HEAD endpoint or provide Trace All,
+It does not explicitly map an HTTP HEAD endpoint or provide
 dependency discovery, a graph viewer, or separate Ping and Trace
 authorization options.
 

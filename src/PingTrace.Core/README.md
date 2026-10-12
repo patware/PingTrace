@@ -24,13 +24,14 @@ SQL Server diagnostics through a registered DbContext are provided by `PingTrace
 
 ## Application contract
 
-`IPingTrace` exposes three operations:
+`IPingTrace` exposes four operations:
 
 | Operation | Return type | Purpose |
 | --- | --- | --- |
 | `Ping()` | `string` | Returns a lightweight application response. |
 | `TraceAsync(cancellationToken)` | `Task<TraceResult>` | Returns the local application's diagnostic result. |
 | `TraceAsync(destination, cancellationToken)` | `Task<IReadOnlyList<TraceResult>>` | Returns results for a named destination trace. |
+| `TraceAllAsync(request, cancellationToken)` | `Task<IReadOnlyList<TraceResult>>` | Recursively traces registered destinations; the request is optional. |
 
 Keep Ping inexpensive. It should not invoke dependencies or perform business
 operations.
@@ -39,7 +40,7 @@ Local Trace describes the current application. Destination Trace allows an
 implementation to invoke a configured dependency and return the relevant
 results.
 
-Both asynchronous operations accept a cancellation token. Implementations
+All asynchronous operations accept a cancellation token. Implementations
 should propagate it to downstream operations.
 
 These interfaces do not define HTTP routes, response status codes, authorization
@@ -58,6 +59,9 @@ The implementation in `PingTrace.Runtime` supplies the following behavior:
   results.
 - Destination names are matched without regard to case.
 - An unknown destination throws `KeyNotFoundException`.
+- TraceAll visits destinations sequentially in case-insensitive ordinal name
+  order and returns the local result followed by each destination's results.
+- Recursive failures propagate; partial result collections are not returned.
 
 These are behaviors of the default runtime, rather than implementations
 provided by this package.
@@ -82,6 +86,29 @@ reported by the remote application.
 
 This separation allows different transports to participate in tracing without
 introducing transport-specific requirements into the core contracts.
+
+### Recursive connectors and traversal context
+
+`IRecursivePingTraceConnector` extends `IPingTraceConnector` with
+`TraceAllAsync(TraceAllRequest, CancellationToken)`. The default runtime invokes
+this member during TraceAll. Existing connectors implementing only
+`IPingTraceConnector` participate as leaves through their `TraceAsync` method.
+
+`TraceAllRequest` carries `RemainingDepth`, `DeadlineUtc`, and `Ancestors` across
+connector boundaries. Defaults are eight connector hops, a deadline thirty
+seconds after request construction, and an empty ancestor path. `Validate()`
+checks a maximum combined depth and ancestor count of sixteen, nonempty ancestor
+identifiers, and a non-default deadline. An expired deadline is valid input;
+the runtime reports it as cancellation.
+
+Recursive connectors must forward the supplied context to participating
+applications. Starting a new request would discard the caller's cycle history
+and execution limits. See the
+[execution guide](https://github.com/patware/Patware.PingTrace/blob/main/docs/architecture/PINGTRACE.md#recursive-traceall)
+for the default runtime's traversal rules.
+
+Custom `IPingTrace` implementations must implement `TraceAllAsync` as well as
+the existing operations.
 
 ## Trace results
 
@@ -135,8 +162,8 @@ timer. Clock adjustments can affect the calculated duration.
 
 ## Scope
 
-The current contracts do not expose Trace All, automatic dependency discovery,
-or destination-path traversal.
+The contracts expose explicit recursive TraceAll. They do not expose automatic
+dependency discovery or destination-path traversal.
 
 A connector returning multiple results does not itself imply recursive
 traversal. Traversal behavior depends on the implementation and connector.

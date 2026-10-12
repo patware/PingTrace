@@ -141,8 +141,13 @@ The API service registers ApiServiceDbContext under the alias ApiServiceDb.
 Configure its ApiService connection string and request the API service's
 `/pingtrace/Trace?destination=ApiServiceDb` endpoint.
 
-Tracing WeatherApiClient from the frontend requests the API's local trace.
-The HTTP adapter does not automatically continue to the API's database.
+Named tracing of WeatherApiClient from the frontend requests the API's local
+Trace and stops there. Requesting the frontend's `/pingtrace/TraceAll` continues
+through the API to ApiServiceDb.
+
+The EF connector participates as a leaf and executes its existing diagnostic
+query. No additional EF registration is required. The runtime visits destinations
+sequentially, avoiding concurrent operations against a shared scoped DbContext.
 
 ## Tests
 

@@ -43,12 +43,14 @@ endpoint mapping.
 
 ## Core contracts
 
-`PingTrace.Core` defines three public building blocks:
+`PingTrace.Core` defines the following public building blocks:
 
 | Type | Role |
 | --- | --- |
-| `IPingTrace` | Provides Ping, local Trace, and destination Trace |
+| `IPingTrace` | Provides Ping, local Trace, destination Trace, and recursive TraceAll |
 | `IPingTraceConnector` | Invokes a configured dependency |
+| `IRecursivePingTraceConnector` | Continues TraceAll on a participating dependency |
+| `TraceAllRequest` | Carries remaining depth, deadline, and ancestor path |
 | `TraceResult` | Carries one component's diagnostic observations |
 
 These contracts contain no ASP.NET Core routing types or HTTP client
@@ -58,7 +60,8 @@ A connector exposes a name and returns a collection of trace results.
 The collection allows a connector to supply multiple observations without
 requiring the runtime to understand the underlying transport.
 
-The current built-in HTTP connector returns one remote observation.
+The HTTP connector returns one remote observation for named Trace and a remote
+result array for TraceAll.
 
 ## Runtime
 
@@ -105,6 +108,10 @@ It does not execute a trace or configure `PingTraceOptions`.
 `AddPingTrace()` uses `TryAddScoped` to register `IPingTrace`. An existing
 registration is preserved, allowing an application to supply its own
 implementation through ordinary dependency injection.
+
+`TraceAllNode` is registered as a singleton in Runtime. Its transient identity
+is shared across request scopes, allowing recursive calls to recognize a return
+to the same application instance without relying on entry-assembly names.
 
 A generic `AddPingTrace<T>()` overload is not currently implemented.
 
@@ -169,11 +176,13 @@ app.MapPingTrace("/diagnostics");
 | `GET /pingtrace/Ping` | `Ping()` | Plain-text string |
 | `GET /pingtrace/Trace` | Local `TraceAsync()` | One JSON object |
 | `GET /pingtrace/Trace?destination=NAME` | Named `TraceAsync(NAME)` | JSON array |
+| `GET /pingtrace/TraceAll` | `TraceAllAsync()` with default context | JSON array |
+| `POST /pingtrace/TraceAll` | `TraceAllAsync(request)` with received context | JSON array |
 
 The endpoint adapter resolves `IPingTrace` from the request's services.
 For trace requests, it passes `HttpContext.RequestAborted` to the runtime.
 
-The current implementation explicitly maps GET endpoints. HEAD support
+The current implementation explicitly maps GET endpoints and POST TraceAll. HEAD support
 has been discussed but is not implemented.
 
 ### Authorization
@@ -185,7 +194,7 @@ endpoint conventions to the group:
 app.MapPingTrace().RequireAuthorization();
 ```
 
-This applies authorization to both Ping and Trace. The host must configure
+This applies authorization to Ping, Trace, and both TraceAll endpoints. The host must configure
 the corresponding authentication and authorization services.
 
 Separate anonymous Ping and protected Trace mapping remains planned work.
@@ -232,15 +241,27 @@ returned results.
 
 ## Outgoing HTTP adapter
 
+TraceAll visits connectors sequentially in case-insensitive ordinal name order.
+Recursive connectors receive a new path context; other connectors are leaves.
+Shared dependencies are visited per path. Cycle detection, depth limits, and
+cooperative deadlines stop invalid or excessive traversal without returning
+partial result collections. See [recursive execution](PINGTRACE.md#recursive-traceall).
+
 `PingTrace.Adapter.HttpClient` registers a named HTTP client and a connector
 for each destination.
 
 The connector creates its client through `IHttpClientFactory` when tracing
-executes. Its default request path is `/pingtrace/Trace`.
+executes. Named destination Trace sends GET to `/pingtrace/Trace` by default;
+TraceAll sends POST to `/pingtrace/TraceAll` with the traversal context.
 
-The adapter expects the remote endpoint to return one JSON trace object.
+For named destination Trace, the adapter expects one JSON trace object.
 It rejects a null result or a result with an empty name, then wraps a valid
 result in a collection for the runtime.
+
+For TraceAll, it expects a nonempty array of non-null, named trace results.
+The remote application continues traversal using the received context. Both
+paths are independently configurable, and recursive requests never fall back
+to local Trace when the remote endpoint is unavailable.
 
 It does not replace the remote application's name with the local
 destination alias.
@@ -290,6 +311,9 @@ The API's local Trace does not invoke any dependencies of its own.
 Consequently, adding dependencies to the API would not make this frontend
 request recursively visit them.
 
+Requesting the frontend's `/pingtrace/TraceAll` instead continues through the
+API's recursive endpoint and then its configured `ApiServiceDb` leaf connector.
+
 Aspire service discovery resolves the service address. It is independent
 of the PingTrace destination discovery capability excluded from version 1.
 
@@ -335,12 +359,13 @@ The host determines the final response for unhandled failures.
 
 ## Extension boundaries
 
-An application can extend PingTrace at three points:
+An application can extend PingTrace at these points:
 
 | Extension point | Purpose |
 | --- | --- |
 | `IPingTrace` | Replace application-level diagnostic behavior |
 | `IPingTraceConnector` | Communicate with another kind of dependency |
+| `IRecursivePingTraceConnector` | Continue recursive traversal with the supplied context |
 | Builder extension methods | Register an adapter and its supporting services |
 
 The EF Core adapter uses these extension boundaries without adding EF Core
@@ -350,11 +375,11 @@ diagnostic query.
 
 ## Current limits
 
-The architecture currently provides explicit named dependency invocation.
+The architecture provides explicit named dependency invocation and recursive
+TraceAll over registered connectors.
 
 It does not yet provide:
 
-- Recursive Trace All.
 - Destination discovery.
 - Automatic multi-hop destination routing.
 - A branching graph result model.

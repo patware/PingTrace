@@ -37,6 +37,8 @@ The libraries currently target .NET 10.
 | `GET /pingtrace/Ping` | Plain text: `Pong` |
 | `GET /pingtrace/Trace` | One JSON object describing the local application |
 | `GET /pingtrace/Trace?destination=NAME` | A JSON array containing the local result and results from the selected destination |
+| `GET /pingtrace/TraceAll` | JSON array containing the local result followed by dependency results |
+| `POST /pingtrace/TraceAll` | The same recursive result array |
 
 The default application name comes from the managed host's entry assembly.
 No application ID or configuration callback is required.
@@ -91,7 +93,7 @@ API result
 `ApiService` is a local destination alias. The remote result retains the
 remote application's own name.
 
-The built-in HTTP adapter requests a local trace from the remote application.
+For named destination Trace, the built-in HTTP adapter requests a local trace from the remote application.
 It does not automatically trace that application's dependencies.
 
 The registration callback receives a `PingTraceBuilder` for registering
@@ -128,6 +130,36 @@ application tables or migrations.
 
 See the [Entity Framework adapter guide](src/PingTrace.Adapter.EntityFramework/README.md)
 for configuration, result fields, lifetime, and test boundaries.
+
+## Trace all registered dependencies
+
+Request the application's:
+
+```http
+GET /pingtrace/TraceAll
+```
+
+TraceAll starts a local trace and sequentially visits every registered
+destination. HTTP destinations continue through the remote application's
+TraceAll endpoint; database destinations perform their existing diagnostics.
+
+For the Aspire sample, calling the frontend returns results for:
+
+```text
+AspireAppSample.Web
+AspireAppSample.ApiService
+ApiServiceDb
+```
+
+The default traversal permits eight connector hops and uses a thirty-second
+deadline. Cycles, exhausted depth, dependency failures, and cancellation
+stop traversal rather than returning partial success.
+
+Shared dependencies are visited through each path. Results remain a flat
+array, and parent durations include descendant execution.
+
+See [recursive execution](docs/architecture/PINGTRACE.md#recursive-traceall)
+for request options, limits, timing, and failure behavior.
 
 ## Try the Aspire sample
 
@@ -202,7 +234,7 @@ schedule probes.
 | --- | --- | --- | --- |
 | A | Every second | Minimal HTTP response | Explicit HEAD support is planned for the HTTP adapter. |
 | B | Every 10 seconds | Confirm application response | Ping is implemented. |
-| C | Every minute | Verify dependency connectivity | Named destination tracing is implemented; recursive Trace All is planned. |
+| C | Every minute | Verify dependency connectivity | Named destination Trace and recursive TraceAll are implemented. |
 | D | Every hour | Exercise representative business behavior safely | Application-owned synthetic checks are outside the initial scope. |
 
 Choose intervals according to the cost of the participating systems.
@@ -236,18 +268,18 @@ app.MapPingTrace().RequireAuthorization();
 ```
 
 With authentication and authorization configured by the host, this protects
-both Ping and Trace. Separate anonymous Ping and protected Trace mapping
+Ping, Trace, and both TraceAll endpoints. Separate anonymous Ping and protected Trace mapping
 is a future API improvement.
 
 ## Current boundaries and direction
 
-The current implementation supports Ping, local Trace, named destination Trace, HTTP dependencies, and SQL Server diagnostics through EF Core.
+The current implementation supports Ping, local Trace, named destination Trace,
+recursive TraceAll, HTTP dependencies, and SQL Server diagnostics through EF Core.
 
 Version 1 excludes destination discovery.
 
 Further work includes:
 
-- Recursive Trace All with bounded execution and cycle handling.
 - A consistent collection response for all Trace operations.
 - Structured payloads.
 - Helpers for constructing local and composite traces.

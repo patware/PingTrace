@@ -231,14 +231,13 @@ client configuration while participating in the host's HTTP infrastructure.
 The current internal client name is `PingTrace.Http:<destination name>`.
 An overload accepting an existing named-client name is not implemented.
 
-## 12. Request the remote application's local Trace
+## 12. Keep named destination Trace local at the remote application
 
-**Decision:** The built-in HTTP connector requests the configured local Trace
+**Decision:** For named destination Trace, the HTTP connector requests the configured local Trace
 endpoint, defaulting to `/pingtrace/Trace`.
 
-**Justification:** This supplies a concrete dependency diagnostic while
-keeping the initial HTTP adapter independent of unresolved recursive-routing
-semantics.
+**Justification:** Named Trace retains its limited execution cost and existing
+response contract. Callers choose TraceAll explicitly when they need recursion.
 
 **Consequences:**
 
@@ -246,7 +245,7 @@ semantics.
 - It wraps that object in a collection for the runtime.
 - The caller's destination alias is not forwarded to the remote application.
 - Remote dependencies are not automatically traced.
-- Trace All requires additional implementation.
+- TraceAll uses a separate recursive endpoint and response contract.
 
 A null response or a result with an empty name is rejected.
 
@@ -288,7 +287,7 @@ expected observations, and recovery actions.
 - Reported runtime identity is diagnostic data, not caller authentication.
 - Incoming access and outgoing credentials are configured separately.
 
-The current mapping returns one group containing Ping and Trace.
+The current mapping returns one group containing Ping, Trace, and both TraceAll endpoints.
 Independent authorization for those endpoints remains planned work.
 
 ## 15. Organize tests around library responsibilities
@@ -313,6 +312,29 @@ dependencies easier to identify.
 Tests use in-memory substitutes where practical. They do not replace
 deployment verification.
 
+## 16. Make recursive traversal an explicit operation
+
+**Decision:** Expose TraceAll separately from local and named destination Trace.
+Use an optional recursive connector interface and pass traversal state across
+process boundaries.
+
+**Justification:** Explicit recursion makes its greater execution cost visible
+to callers. Existing connectors remain useful as leaves. Sequential traversal
+supports connectors sharing a scoped DbContext.
+
+**Consequences:**
+
+- Runtime traversal is sequential and ordered by destination name.
+- Shared dependencies are visited through each path.
+- Singleton node identities support cycle detection across request scopes.
+- Depth limits and cooperative deadlines bound traversal.
+- HTTP recursion uses POST to carry traversal state.
+- Failures stop traversal without returning partial results.
+- Results remain a flat collection.
+
+See [recursive execution](../architecture/PINGTRACE.md#recursive-traceall) for
+the current defaults and limitations.
+
 ## Current implementation details that remain open to change
 
 The following describe the code today. They are not commitments to preserve
@@ -325,7 +347,7 @@ these shapes indefinitely.
 | Payload | String; application assembly version or connector-specific diagnostics | Structured payload |
 | Duration | Difference between `DateTime.Now` timestamps | Monotonic duration measurement |
 | Result relationships | Flat ordered collection | Explicit paths or relationships if required by graph features |
-| HTTP methods | Explicit GET mappings | HEAD support on Ping |
+| HTTP methods | GET Ping/Trace/TraceAll; POST TraceAll | HEAD support on Ping |
 | Authorization mapping | One shared group | Independent Ping and diagnostic configuration |
 
 Changing the local response shape requires coordinated changes to Core,
@@ -335,8 +357,7 @@ Runtime, AspNetCore, the HTTP adapter, tests, and documentation.
 
 The following remain design work:
 
-- Trace All method shape and traversal protocol.
-- Cycle detection, execution limits, and shared dependencies.
+- Additional total request or result-count limits for recursive traversal.
 - Multi-hop destination routing.
 - Partial-failure representation.
 - Trace helper APIs.

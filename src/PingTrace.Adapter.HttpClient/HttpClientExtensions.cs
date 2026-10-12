@@ -27,6 +27,9 @@ public static class HttpClientExtensions
     /// <param name="tracePath">
     /// The relative path to the remote application's local Trace endpoint.
     /// </param>
+    /// <param name="traceAllPath">
+    /// The relative path to the remote application's recursive TraceAll endpoint.
+    /// </param>
     /// <returns>
     /// The HTTP client builder for configuring handlers and other
     /// HTTP client services.
@@ -44,26 +47,23 @@ public static class HttpClientExtensions
     /// The default path begins at the server root. To preserve a path prefix
     /// in BaseAddress, supply a relative path without a leading slash and
     /// give BaseAddress a trailing slash.
+    /// The local and recursive paths are independent; configure both when
+    /// the remote application uses a custom prefix or base-address path.
     /// </remarks>
     public static IHttpClientBuilder AddHttpDestination(
         this PingTraceBuilder builder,
         string name,
         Action<NetHttpClient> configureClient,
-        string tracePath = "/pingtrace/Trace")
+        string tracePath = "/pingtrace/Trace",
+        string traceAllPath = "/pingtrace/TraceAll")
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(configureClient);
         ArgumentException.ThrowIfNullOrWhiteSpace(tracePath);
 
-        if (tracePath.StartsWith("//", StringComparison.Ordinal) ||
-            tracePath.Contains('\\') ||
-            Uri.TryCreate(tracePath, UriKind.Absolute, out _))
-        {
-            throw new ArgumentException(
-                "The trace path must be relative to the configured server.",
-                nameof(tracePath));
-        }
+        ValidatePath(tracePath, nameof(tracePath));
+        ValidatePath(traceAllPath, nameof(traceAllPath));
 
         string httpClientName = $"PingTrace.Http:{name}";
 
@@ -74,8 +74,23 @@ public static class HttpClientExtensions
                 name,
                 provider.GetRequiredService<IHttpClientFactory>(),
                 httpClientName,
-                tracePath));
+                tracePath,
+                traceAllPath));
 
         return httpClientBuilder;
+    }
+
+    private static void ValidatePath(string path, string parameterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path, parameterName);
+
+        if (path.StartsWith("//", StringComparison.Ordinal) ||
+            path.Contains('\\') ||
+            Uri.TryCreate(path, UriKind.Absolute, out _))
+        {
+            throw new ArgumentException(
+                "The trace path must be relative to the configured server.",
+                parameterName);
+        }
     }
 }

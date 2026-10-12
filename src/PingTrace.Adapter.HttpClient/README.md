@@ -28,8 +28,12 @@ builder.Services.AddPingTrace(pingTrace =>
 
 Replace the example address with the remote application's address.
 
-By default, the adapter sends a GET request to `/pingtrace/Trace`.
-The remote endpoint must return one JSON object compatible with `TraceResult`.
+The outgoing operation depends on the requested trace:
+
+| Operation | Default request | Expected response |
+| --- | --- | --- |
+| Named destination Trace | `GET /pingtrace/Trace` | One named `TraceResult` object |
+| TraceAll | `POST /pingtrace/TraceAll` with traversal state | A nonempty array of named trace results |
 
 Registration does not send a request. Communication occurs when the
 application traces the registered destination.
@@ -87,7 +91,8 @@ name returned by the remote endpoint.
 Each registration creates:
 
 - A named HTTP client using `PingTrace.Http:{name}`.
-- A scoped `IPingTraceConnector` for that destination.
+- A scoped `IPingTraceConnector` for that destination, also implementing
+  `IRecursivePingTraceConnector`.
 
 The default runtime compares destination names without regard to case.
 Names must be unique and must not conflict with the calling application's
@@ -118,9 +123,9 @@ for the diagnostic client as well.
 
 There is currently no overload that accepts an existing named or typed client.
 
-## Configure the remote path
+## Configure the remote paths
 
-`AddHttpDestination` accepts an optional `tracePath`:
+`AddHttpDestination` accepts optional `tracePath` and `traceAllPath` arguments:
 
 ```csharp
 builder.Services.AddPingTrace(pingTrace =>
@@ -131,15 +136,17 @@ builder.Services.AddPingTrace(pingTrace =>
         {
             client.BaseAddress = new Uri("https://api.example.com/");
         },
-        tracePath: "/diagnostics/Trace");
+        tracePath: "/diagnostics/Trace",
+        traceAllPath: "/diagnostics/TraceAll");
 });
 ```
 
 Use this when the remote application maps PingTrace under a custom prefix.
+The paths are independent: setting `tracePath` does not change `traceAllPath`.
 
 ### Applications hosted beneath a path
 
-The default path begins with `/`, so it resolves from the server root.
+Both default paths begin with `/`, so they resolve from the server root.
 
 To preserve a path in `BaseAddress`, give the base address a trailing slash
 and supply a trace path without a leading slash:
@@ -153,14 +160,16 @@ builder.Services.AddPingTrace(pingTrace =>
         {
             client.BaseAddress = new Uri("https://example.com/backend/");
         },
-        tracePath: "pingtrace/Trace");
+        tracePath: "pingtrace/Trace",
+        traceAllPath: "pingtrace/TraceAll");
 });
 ```
 
-The resulting request targets:
+The resulting requests target:
 
 ```text
 https://example.com/backend/pingtrace/Trace
+https://example.com/backend/pingtrace/TraceAll
 ```
 
 | Base address | Trace path | Request address |
@@ -168,7 +177,7 @@ https://example.com/backend/pingtrace/Trace
 | `https://example.com/backend/` | `/pingtrace/Trace` | `https://example.com/pingtrace/Trace` |
 | `https://example.com/backend/` | `pingtrace/Trace` | `https://example.com/backend/pingtrace/Trace` |
 
-The trace path must be nonblank. Registration rejects absolute URLs, paths
+Both paths must be nonblank. Registration rejects absolute URLs, paths
 beginning with `//`, and paths containing backslashes.
 
 ## Configure client behavior
@@ -188,6 +197,8 @@ builder.Services.AddPingTrace(pingTrace =>
 ```
 
 The timeout shown here is an application choice, not an adapter default.
+During TraceAll, the runtime also supplies a cancellation token linked to the
+traversal deadline. A longer client timeout does not extend that deadline.
 
 `AddHttpDestination` returns `IHttpClientBuilder`, allowing the application to
 configure HTTP handlers and other client services through standard client
@@ -224,7 +235,7 @@ but it does not inherit settings specific to the sample's typed
 
 ## Remote response contract
 
-The adapter deserializes the response as one `TraceResult`.
+For named destination Trace, the adapter deserializes one `TraceResult`.
 
 It requires:
 
@@ -238,8 +249,17 @@ The adapter does not validate every result field. For example, it does not
 require a particular machine name, identity, payload, or elapsed value.
 
 A destination Trace endpoint returns an array, so it is not the response
-shape expected by this adapter. Configure the path to the remote application's
+shape expected by `TraceAsync`. Configure `tracePath` to the remote application's
 local Trace endpoint.
+
+For TraceAll, `traceAllPath` must return a nonempty array of `TraceResult` objects.
+Every entry must be non-null and have a nonblank name. The adapter returns the
+remote subtree without adding the caller's local result; the runtime adds it.
+
+POST serializes the supplied `TraceAllRequest`, preserving depth, deadline, and
+ancestors. The remote application continues traversal using that context. A
+missing recursive endpoint remains an HTTP failure; there is no fallback to
+local Trace that could silently omit descendants.
 
 ## Failures and cancellation
 
@@ -249,6 +269,7 @@ local Trace endpoint.
 | Remote HTTP status is unsuccessful | The HTTP operation fails and its exception propagates. |
 | Response JSON is invalid or incompatible | Deserialization fails and its exception propagates. |
 | Deserialized result is null or has a blank name | Throws `InvalidOperationException`. |
+| Recursive result array is null, empty, or contains a null or unnamed entry | Throws `InvalidOperationException`. |
 | Network failure or timeout | The operation fails and its exception propagates. |
 
 The connector checks cancellation before creating the client and passes the
@@ -268,9 +289,14 @@ the adapter operation, including the HTTP request and response processing.
 The remote result contains the remote application's own timing.
 Neither value directly measures network latency between the applications.
 
-The adapter requests a local trace from one remote application. It does not
-forward the destination alias, discover dependencies, or recursively traverse
-the remote application's dependencies.
+Named destination Trace requests the remote application's local Trace.
+TraceAll requests recursive tracing, allowing the remote application to visit
+its own registered dependencies. Neither operation forwards the destination
+alias or discovers arbitrary dependencies.
+
+Recursive results are flat and ordered. Shared dependencies may appear through
+multiple paths, and parent durations include descendant work. Do not add those
+overlapping durations to calculate total latency.
 
 ## Learn more
 

@@ -11,6 +11,7 @@ dynamic plugin loader, assembly scanning, or destination discovery endpoint.
 | --- | --- |
 | Call another application's HTTP Trace endpoint | `AddHttpDestination` |
 | Communicate through another protocol or application client | `IPingTraceConnector` |
+| Continue recursive tracing on a participating dependency | `IRecursivePingTraceConnector` |
 | Package reusable adapter registration | Extension method on `PingTraceBuilder` |
 | Replace application-level Ping and Trace behavior | `IPingTrace` |
 
@@ -231,8 +232,25 @@ The default runtime appends them after its local result in the order
 provided. It does not interpret their names as instructions to invoke
 additional connectors.
 
-The current built-in HTTP adapter returns one remote result.
-Recursive Trace All is not implemented.
+For named destination Trace, the built-in HTTP adapter returns one remote result.
+For TraceAll, it sends the traversal context to the remote recursive endpoint
+and returns that application's complete result array.
+
+### Recursive connector capability
+
+`IRecursivePingTraceConnector` extends `IPingTraceConnector` with
+`TraceAllAsync(TraceAllRequest, CancellationToken)`. Register it as an
+`IPingTraceConnector` so the runtime includes it in its connector collection.
+
+During TraceAll, the runtime calls this member with the remaining depth,
+effective deadline, and ancestor path. Forward that context to the dependency;
+starting a fresh request would reset its limits and cycle history.
+
+Connectors implementing only `IPingTraceConnector`, including the EF adapter,
+are treated as leaves and receive their existing `TraceAsync` call.
+The runtime visits connectors sequentially, preserving scoped DbContext safety.
+It adds the local result, handles path-local cycle checks, and propagates failures.
+See [recursive execution](PINGTRACE.md#recursive-traceall) for the full contract.
 
 ## Register a custom connector
 
@@ -309,7 +327,7 @@ builder.Services.AddScoped<IPingTrace, MyPingTrace>();
 builder.Services.AddPingTrace();
 ```
 
-`MyPingTrace` must implement the current Ping and Trace members.
+`MyPingTrace` must implement the current Ping, Trace, and TraceAll members.
 The ASP.NET Core endpoint adapter will resolve it through `IPingTrace`.
 
 A custom implementation owns its execution behavior. Merely registering
@@ -360,8 +378,8 @@ suite also exercises an adapter against an in-memory PingTrace endpoint.
 
 ## Current boundaries
 
-There is no destination discovery API, dynamic adapter loading, or automatic
-recursive traversal.
+There is no destination discovery API or dynamic adapter loading. Recursive
+traversal is available through the explicit TraceAll operation.
 
 Adapters are explicitly registered by the application.
 

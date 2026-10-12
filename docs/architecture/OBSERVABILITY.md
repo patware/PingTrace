@@ -44,7 +44,7 @@ not defaults enforced by the library.
 | --- | --- | --- | --- |
 | A | Every second | Obtain a minimal endpoint response | Explicit HEAD support on Ping is planned |
 | B | Every 10 seconds | Confirm that application code responds predictably | Ping is implemented |
-| C | Every minute | Verify selected dependency connections | Destination Trace is implemented; recursive Trace All is planned |
+| C | Every minute | Verify dependency connections | Named destination Trace and recursive TraceAll are implemented |
 | D | Every hour | Exercise representative business behavior safely | Application-owned synthetic or what-if checks |
 
 A high-frequency probe can be appropriate when its work is deliberately
@@ -72,7 +72,7 @@ A monitoring check can verify the expected status and exact response body.
 Ping establishes that the application endpoint can answer. It does not
 test dependencies or business operations.
 
-The current HTTP adapter explicitly maps GET. Do not configure a monitor
+The ASP.NET Core adapter explicitly maps GET for Ping. Do not configure a monitor
 to depend on PingTrace HEAD support until that support is implemented
 and verified.
 
@@ -268,10 +268,14 @@ These paths illustrate a future diagnostic workflow. The current runtime
 does not parse path expressions or automatically route through several
 applications.
 
-The built-in HTTP connector requests the immediate target's local Trace.
+For named destination Trace, the HTTP connector requests the immediate target's
+local Trace. TraceAll instead calls the remote recursive endpoint and visits
+its registered dependencies.
 
-Recursive Trace All and explicit multi-hop routing require additional
-design and implementation.
+Explicit multi-hop destination routing remains future work. TraceAll follows
+registered connectors rather than a caller-supplied destination path. Shared
+dependencies are visited per path, and parent durations include descendant work;
+do not add overlapping durations to calculate total latency.
 
 A future graph viewer must preserve path or parent-child relationships.
 The current flat result array alone does not describe a branching graph.

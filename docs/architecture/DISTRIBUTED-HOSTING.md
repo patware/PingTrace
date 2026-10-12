@@ -204,9 +204,10 @@ The outgoing request does not contain
 `destination=WeatherApiClient`. That alias belongs to the frontend's
 configuration.
 
-The API's local trace does not invoke its own dependencies. Adding a
-database connector to the API in the future would not make this frontend
-request automatically trace the database.
+The API's local Trace does not invoke its own dependencies. Its configured
+database connector is therefore not invoked by this named frontend request.
+Request `/pingtrace/TraceAll` from the frontend to continue through the API
+to its `ApiServiceDb` diagnostics instead.
 
 ## What a successful request establishes
 
@@ -354,8 +355,9 @@ A deployed application must choose who can access that information.
 Incoming endpoint authorization and outgoing dependency authentication
 are separate configurations.
 
-The current `MapPingTrace()` returns a group containing both Ping and
-Trace. Applying authorization to that group protects both operations.
+The current `MapPingTrace()` returns a group containing Ping, Trace, and both
+TraceAll endpoints. Applying authorization to that group protects all mapped
+operations.
 
 See [security and host responsibilities](SECURITY.md) for the current
 authorization boundary.

@@ -99,13 +99,15 @@ automatically traverse them.
 
 The built-in HTTP adapter uses a named client from `IHttpClientFactory`.
 
-Its default remote path is `/pingtrace/Trace`. It expects the remote
+For named destination Trace, its default remote path is `/pingtrace/Trace`. It expects the remote
 endpoint to return a single local trace object with a nonempty name.
 
 The adapter wraps that object in a collection for the runtime.
 
-It does not forward the local destination alias to the remote endpoint
-and does not recursively invoke the remote application's dependencies.
+Named destination Trace does not forward the local destination alias or invoke
+the remote application's dependencies. TraceAll instead sends POST to
+`/pingtrace/TraceAll` with the traversal context and expects a nonempty array
+of named results. Both paths are configurable independently.
 
 The adapter creates its HTTP client when tracing executes. Ping and local
 Trace do not send HTTP requests.
@@ -150,6 +152,8 @@ measurement is a proposed improvement; it is not implemented.
 
 `AddPingTrace()` registers the default implementation with a scoped lifetime,
 unless an `IPingTrace` implementation is already registered.
+It also registers a singleton `TraceAllNode` so recursive requests in different
+scopes share the application's runtime identity.
 
 Its optional callback receives a `PingTraceBuilder` during startup.
 Adapters use the builder's service collection to register dependencies.
@@ -159,7 +163,8 @@ The callback does not execute trace operations or configure
 
 ## Endpoint mapping
 
-`MapPingTrace()` maps GET endpoints under `/pingtrace`.
+`MapPingTrace()` maps GET Ping, Trace, and TraceAll, plus POST TraceAll, under
+`/pingtrace`.
 
 A string argument changes the prefix:
 
@@ -168,20 +173,26 @@ app.MapPingTrace("/diagnostics");
 ```
 
 It returns a route group to which the host can apply endpoint conventions.
-Authorization applied to that group affects both Ping and Trace.
+Authorization applied to that group affects Ping, Trace, and both TraceAll endpoints.
 
 Explicit HEAD support, mapping-options objects, and separate authorization
 builders are not implemented.
 
 ## Trace All
 
-Trace All is the planned operation that recursively visits configured
-dependencies.
+`IPingTrace.TraceAllAsync` recursively visits configured dependencies.
+`IRecursivePingTraceConnector` continues traversal with a `TraceAllRequest`;
+other connectors participate as leaves through `TraceAsync`.
 
-No Trace All method or endpoint currently exists.
+The default runtime visits connectors sequentially in case-insensitive ordinal
+name order. Shared dependencies are visited per path. The request carries the
+remaining depth, absolute deadline, and ancestor identities for cycle detection.
+Defaults are eight connector hops and a thirty-second cooperative deadline.
+Failures stop traversal rather than returning partial results.
 
-Before implementation, the design must define cycle handling, traversal
-limits, cancellation propagation, shared dependencies, and partial failures.
+GET TraceAll starts a traversal; POST TraceAll continues one using JSON context.
+Both return flat arrays. See [recursive execution](PINGTRACE.md#recursive-traceall)
+for limits and timing semantics.
 
 ## Monitoring policy
 

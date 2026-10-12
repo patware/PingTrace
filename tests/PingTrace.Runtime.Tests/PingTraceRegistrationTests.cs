@@ -153,6 +153,62 @@ public sealed class PingTraceRegistrationTests
             .WithParameterName("services");
     }
 
+    /// <summary>
+    /// Verifies that different request scopes use the same traversal identity.
+    /// </summary>
+    /// <remarks>
+    /// Cycle detection must survive a new HTTP request scope. Merely resolving
+    /// a singleton node would not prove that DefaultPingTrace uses that node.
+    /// </remarks>
+    [TestMethod]
+    public async Task TraceAll_NewScope_RecognizesPreviouslyVisitedNode()
+    {
+        // Arrange
+        ServiceCollection services = new();
+
+        IRecursivePingTraceConnector connector = Substitute.For<IRecursivePingTraceConnector>();
+        connector.Name.Returns("RemoteApi");
+
+        TraceAllRequest? forwarded = null;
+
+        connector.TraceAllAsync(
+                Arg.Any<TraceAllRequest>(),
+                Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                forwarded = call.Arg<TraceAllRequest>();
+
+                return Task.FromResult<IReadOnlyList<TraceResult>>(
+                    new[] { new TraceResult { Name = "RemoteApi" } });
+            });
+
+        services.AddPingTrace(builder => builder.Services.AddScoped<IPingTraceConnector>(_ => connector));
+
+        using ServiceProvider provider = BuildProvider(services);
+        using IServiceScope firstScope = provider.CreateScope();
+        using IServiceScope secondScope = provider.CreateScope();
+
+        IPingTrace first = firstScope.ServiceProvider.GetRequiredService<IPingTrace>();
+        IPingTrace second = secondScope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        // Act
+        await first.TraceAllAsync(cancellationToken: TestContext.CancellationToken);
+
+        Func<Task> revisit = () => second.TraceAllAsync(forwarded, TestContext.CancellationToken);
+
+        // Assert
+        forwarded.Should().NotBeNull();
+        first.Should().NotBeSameAs(second);
+
+        await revisit.Should()
+            .ThrowAsync<InvalidOperationException>()
+            .WithMessage("*cycle*");
+
+        await connector.Received(1).TraceAllAsync(
+            Arg.Any<TraceAllRequest>(),
+            Arg.Any<CancellationToken>());
+    }
+
     private static ServiceProvider BuildProvider(IServiceCollection services)
     {
         return services.BuildServiceProvider(new ServiceProviderOptions

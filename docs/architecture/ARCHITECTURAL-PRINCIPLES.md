@@ -90,7 +90,7 @@ A named destination request invokes the selected connector.
 
 It must not silently become a request to probe every registered dependency.
 
-Future Trace All should be an explicit operation because recursive traversal
+TraceAll is an explicit operation because recursive traversal
 has a different cost and failure model.
 
 Similarly, an on-demand investigation that probes several paths should
@@ -111,8 +111,8 @@ This keeps connection knowledge with the application that owns it.
 Version 1 excludes destination discovery. Address resolution supplied by
 the host, such as Aspire service discovery, is a separate responsibility.
 
-Future recursive tracing should follow participating applications'
-configured dependencies. It should not discover arbitrary network targets.
+Recursive tracing follows participating applications' configured dependencies.
+It does not discover arbitrary network targets.
 
 ## 7. Prefer reusable connectors for ordinary integrations
 
@@ -182,8 +182,9 @@ and avoid masking cancellation as success.
 Future partial-result support needs an explicit result contract that
 distinguishes successful observations, failures, and incomplete traversal.
 
-Recursive tracing also needs bounded execution and cycle handling before
-it can be relied on for routine monitoring.
+Recursive tracing uses path-local cycle detection, depth limits, and cooperative
+deadlines. Shared dependencies are visited per path. There is no separate limit
+on total requests or results, so hosts must choose probe frequency appropriately.
 
 ## 11. Keep health policy with the application and monitor
 

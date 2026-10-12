@@ -1,7 +1,9 @@
 # Execution model
 
 This page describes how the current default runtime processes Ping,
-local Trace, and destination Trace requests.
+local Trace, destination Trace, and recursive TraceAll requests.
+TraceAll visits explicitly registered dependencies. Local Trace and named
+destination Trace retain their existing behavior.
 
 Examples use the default `/pingtrace` route prefix and default ASP.NET Core
 JSON settings. Hosts can change the route prefix, serialization settings,
@@ -15,9 +17,11 @@ and authorization policy.
 | `GET /pingtrace/Trace` | None | One local trace object |
 | `GET /pingtrace/Trace?destination=LOCAL_NAME` | None | Array containing one local result |
 | `GET /pingtrace/Trace?destination=DEPENDENCY_NAME` | Selected connector only | Array containing the local result followed by connector results |
+| `GET /pingtrace/TraceAll` | All registered destinations, recursively where supported | JSON array containing the local result followed by dependency results |
+| `POST /pingtrace/TraceAll` | Continues traversal using the supplied request body | The same recursive result array |
 
-The current implementation does not provide Trace All or automatic
-recursive traversal.
+TraceAll is an explicit operation. It does not discover destinations or change
+the behavior of the existing Trace endpoints.
 
 ## Before requests arrive
 
@@ -210,7 +214,7 @@ are not traced.
 
 ## What the HTTP connector does
 
-The built-in HTTP connector:
+For named destination Trace, the built-in HTTP connector:
 
 1. Checks cancellation.
 2. Creates its named client through `IHttpClientFactory`.
@@ -249,6 +253,170 @@ lookup. Repeating `destination` does not request multiple traces.
 
 A destination value is not interpreted as an arbitrary URL or a discovered
 route to another application.
+
+## Recursive TraceAll
+
+TraceAll starts a local trace, visits the application's registered
+destinations, and completes the local trace after those destinations finish.
+
+Start a traversal through HTTP:
+
+```http
+GET /pingtrace/TraceAll
+```
+
+Or through an injected `IPingTrace`:
+
+```csharp
+IReadOnlyList<TraceResult> results = await pingTrace.TraceAllAsync(
+    cancellationToken: cancellationToken);
+```
+
+### Traversal and ordering
+
+The default runtime visits destinations sequentially in
+case-insensitive ordinal order by their registered names.
+
+For each destination:
+
+- An `IRecursivePingTraceConnector` receives `TraceAllAsync` with the
+  remaining depth, deadline, and ancestor path.
+- A connector implementing only `IPingTraceConnector` receives its existing
+  `TraceAsync` call and is treated as a leaf.
+
+Sequential execution avoids concurrent operations against a shared scoped
+DbContext.
+
+Each application returns its local result first, followed by the results
+from each destination. The runtime preserves each connector's result order.
+With the built-in adapters, this produces depth-first traversal.
+
+A shared dependency is visited once through each path that reaches it.
+Results are not globally deduplicated.
+
+### HTTP and database destinations
+
+The HTTP adapter sends a POST request to the remote application's
+`/pingtrace/TraceAll` endpoint. Its JSON body contains the traversal state.
+The remote application then traces its own registered destinations.
+
+The response must be a nonempty JSON array of non-null trace results with
+nonblank names. An unavailable recursive endpoint remains a failure; the
+adapter does not fall back to local Trace.
+
+The Entity Framework adapter is a leaf. TraceAll invokes its existing
+SQL Server diagnostic query.
+
+In the Aspire sample, requesting the frontend's `/pingtrace/TraceAll`
+reaches the API service and then its `ApiServiceDb` destination.
+
+Named destination Trace retains its narrower behavior:
+`/pingtrace/Trace?destination=WeatherApiClient` requests the API's local
+Trace and does not continue to its database.
+
+### Traversal limits
+
+`TraceAllRequest` carries the state of one traversal path:
+
+| Property | Default | Meaning |
+| --- | --- | --- |
+| `RemainingDepth` | `8` | Connector hops still permitted |
+| `DeadlineUtc` | UTC time at request construction plus 30 seconds | Latest permitted execution time |
+| `Ancestors` | Empty array | Runtime node identities already visited on this path |
+
+A new call without a request creates a fresh `TraceAllRequest`.
+
+Before calling a recursive connector, the runtime decrements the depth and
+appends its node identity to a new ancestor array. Sibling paths receive
+independent arrays.
+
+Validation requires a depth from zero through sixteen, a non-null ancestor
+array containing at most sixteen nonempty identifiers, and a combined
+ancestor count plus remaining depth no greater than sixteen. The deadline
+must not be the default timestamp.
+
+At zero depth, an application without registered destinations returns its
+local result. An application with destinations throws rather than silently
+returning an incomplete traversal.
+
+Each runtime uses the earlier of the received deadline and thirty seconds
+after its own execution begins. That effective deadline is forwarded to
+descendants. A caller can shorten the budget; a later supplied deadline
+cannot extend a runtime invocation beyond its local thirty-second limit.
+
+For example:
+
+```csharp
+TraceAllRequest request = new()
+{
+    RemainingDepth = 4,
+    DeadlineUtc = DateTimeOffset.UtcNow.AddSeconds(10)
+};
+
+IReadOnlyList<TraceResult> results = await pingTrace.TraceAllAsync(
+    request,
+    cancellationToken);
+```
+
+Create the request when starting the operation. Reusing a request later
+also reuses its original deadline.
+
+Deadlines use wall-clock time, so participating hosts should have
+synchronized clocks. Cancellation is cooperative: a connector that ignores
+its token cannot be forcibly stopped by the runtime.
+
+Depth and time limits do not impose a separate maximum on the number of
+requests or results in a wide dependency graph.
+
+### Cycle detection
+
+`AddPingTrace` registers `TraceAllNode` as a singleton and `DefaultPingTrace`
+as a scoped service. Separate request scopes therefore recognize the same
+running application instance.
+
+If the current node already appears in the incoming ancestor path,
+traversal throws `InvalidOperationException` before invoking connectors.
+
+Node identities are transient runtime identifiers, not application names
+or permanent identifiers in trace results. Separate application instances
+have different identities. The depth limit remains necessary when a loop
+passes through different instances behind a load balancer.
+
+### Results and timing
+
+A leaf application's payload contains its entry-assembly version, falling
+back to `Pong`. An application with destinations uses
+`{version} --> [TraceAll]`.
+
+The local result starts before dependency execution and finishes afterward.
+Its elapsed time therefore includes descendant work. Parent and child
+durations overlap and must not be added to calculate total latency.
+
+Results remain a flat collection. They do not contain parent identifiers
+or enough relationship information to reconstruct a branching graph
+reliably.
+
+### Failures and cancellation
+
+Dependency failures propagate and stop the remaining traversal.
+The runtime does not return a partial result collection.
+
+Cycles and exhausted depth throw `InvalidOperationException`.
+Cancellation and expired deadlines produce cancellation exceptions in
+the runtime.
+
+All Trace endpoints pass `HttpContext.RequestAborted` to the implementation.
+The runtime links that token to its execution deadline.
+
+The recursive POST endpoint validates the supplied request before invoking
+the runtime. Invalid traversal state is returned as HTTP 400.
+Request-body binding handles malformed or missing JSON.
+
+Other failures propagate to the host's exception handling. PingTrace does
+not define a dedicated HTTP status or error body for cycles, exhausted
+depth, or deadline expiry. Exceptions crossing HTTP boundaries are observed
+through the remote HTTP response rather than preserving their original
+.NET exception type.
 
 ## Errors
 
@@ -370,6 +538,8 @@ With the sample running, use the frontend address shown by Aspire.
    API result.
 5. Request `/pingtrace/Trace` directly from the API and compare its
    local observations.
+6. Request `/pingtrace/TraceAll` from the frontend to include the API's
+   configured `ApiServiceDb` diagnostics. This requires the database to be available.
 
 Use the reported application name and machine to verify which component
 answered. Use local versus dependency elapsed times to narrow a delay
