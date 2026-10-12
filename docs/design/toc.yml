@@ -1,0 +1,5 @@
+items:
+- name: Implemented decisions
+  href: ADOPTION-DECISIONS.md
+- name: Capability boundaries
+  href: CAPABILITY-BOUNDARIES.md

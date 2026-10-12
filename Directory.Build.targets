@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup Condition="'$(PackageId)' != '' and '$(IsPackable)' != 'false'">
+    <PackageReleaseNotes>Release and upgrade notes: https://github.com/patware/Patware.PingTrace/releases/tag/v$(Version)</PackageReleaseNotes>
+  </PropertyGroup>
+</Project>

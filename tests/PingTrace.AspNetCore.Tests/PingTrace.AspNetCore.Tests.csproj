@@ -1,0 +1,25 @@
+﻿<Project Sdk="MSTest.Sdk/4.4.1">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="8.11.0" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
+    <PackageReference Include="MSTest" Version="4.4.1" />
+    <PackageReference Include="NSubstitute" Version="6.2.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PingTrace.Adapter.HttpClient\PingTrace.Adapter.HttpClient.csproj" />
+    <ProjectReference Include="..\..\src\PingTrace.AspNetCore\PingTrace.AspNetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+</Project>
