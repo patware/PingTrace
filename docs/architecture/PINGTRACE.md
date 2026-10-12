@@ -93,7 +93,7 @@ The default runtime:
 1. Checks cancellation.
 2. Creates a result, capturing its start time.
 3. Populates the application name, machine name, and runtime identity.
-4. Calls `Finish("Pong")`, capturing the finish time.
+4. Calls `Finish` with the entry-assembly version, falling back to `Pong`, and captures the finish time.
 5. Returns the result.
 
 Example successful JSON response:
@@ -105,7 +105,7 @@ Example successful JSON response:
   "machineName": "WEB01",
   "startedAt": "2026-10-11T10:00:00.000-04:00",
   "finishedAt": "2026-10-11T10:00:00.001-04:00",
-  "payload": "Pong",
+  "payload": "1.2.3.0",
   "elapsed": "00:00:00.0010000"
 }
 ```
@@ -114,6 +114,10 @@ The response has status 200 and an `application/json` media type.
 
 Values above are illustrative. Actual identity formatting and timestamp
 offsets depend on the execution environment.
+
+Version numbers in these examples are illustrative. Each application's
+default payload comes from its own managed entry assembly, with `Pong`
+used when its version is unavailable.
 
 No dependency is contacted, even when connectors are registered.
 
@@ -138,14 +142,14 @@ Example successful response:
     "machineName": "WEB01",
     "startedAt": "2026-10-11T10:00:00.000-04:00",
     "finishedAt": "2026-10-11T10:00:00.001-04:00",
-    "payload": "Pong",
+    "payload": "1.2.3.0",
     "elapsed": "00:00:00.0010000"
   }
 ]
 ```
 
-The payload remains `Pong`. The `Pong [destination]` payload is used only
-when the runtime invokes a dependency connector.
+The payload remains the local application version. The destination suffix
+is added only when the runtime invokes a dependency connector.
 
 The current difference between local-object and destination-array responses
 is intentional in the implemented contract. Consumers must handle it.
@@ -183,7 +187,7 @@ Example successful response:
     "machineName": "WEB01",
     "startedAt": "2026-10-11T10:00:00.000-04:00",
     "finishedAt": "2026-10-11T10:00:00.025-04:00",
-    "payload": "Pong [WeatherApiClient]",
+    "payload": "1.2.3.0 --> [WeatherApiClient]",
     "elapsed": "00:00:00.0250000"
   },
   {
@@ -192,7 +196,7 @@ Example successful response:
     "machineName": "API01",
     "startedAt": "2026-10-11T10:00:00.010-04:00",
     "finishedAt": "2026-10-11T10:00:00.011-04:00",
-    "payload": "Pong",
+    "payload": "2.0.0.0",
     "elapsed": "00:00:00.0010000"
   }
 ]

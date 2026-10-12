@@ -94,10 +94,12 @@ The default application name comes from the managed entry assembly.
 The reported runtime identity is not necessarily the credential used for
 an outgoing HTTP or database connection.
 
-The current payload is a string. Local Trace returns `Pong`; a dependency
-trace's local result uses `Pong [destination]`.
+Payload is currently a string. Local Trace reports the managed entry
+assembly's version, falling back to `Pong` when unavailable. A dependency
+trace's local result uses `{version} --> [{destination}]`.
 
-Assembly-version payloads and structured object payloads remain planned work.
+Connector payloads describe the dependency. The SQL Server connector returns
+the current database name. Structured object payloads remain planned work.
 
 ## Deployment verification
 

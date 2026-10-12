@@ -13,6 +13,7 @@ Library tests live in projects corresponding to the libraries they exercise:
 - `PingTrace.Runtime.Tests`
 - `PingTrace.Adapter.HttpClient.Tests`
 - `PingTrace.AspNetCore.Tests`
+- `PingTrace.Adapter.EntityFramework.Tests`
 
 The adapter-to-endpoint round-trip test currently lives in
 `PingTrace.AspNetCore.Tests`.
@@ -142,6 +143,12 @@ Tests must remain independent of execution order and other tests.
 
 Dispose resources according to their ownership, including service scopes,
 providers, clients, responses, cancellation sources, and test hosts.
+
+EF adapter tests use an in-memory SQLite provider for relational infrastructure.
+A command interceptor substitutes readers or failures before the SQL
+Server-specific command executes. The substituted reader must match EF's
+generated projection order. These tests do not validate SQL Server syntax,
+connectivity, authentication, or permissions.
 
 ## Make asynchronous tests deterministic
 

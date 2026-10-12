@@ -126,7 +126,10 @@ The default values are:
 | `Name` | `Assembly.GetEntryAssembly()?.GetName().Name` |
 | `MachineName` | `Environment.MachineName` |
 | `Identity` | `Environment.UserDomainName` and `Environment.UserName`, separated by a backslash |
-| `Payload` | `Pong` |
+| `Payload` | Managed entry-assembly version, falling back to `Pong` |
+
+The version is the managed entry assembly's assembly version. It is not the
+PingTrace library version, package version, or informational version.
 
 The name identifies the managed host's entry assembly, not the
 `PingTrace.Runtime` assembly. Construction fails with `InvalidOperationException`
@@ -147,7 +150,7 @@ For a registered dependency, it:
 1. Creates the local result.
 2. Invokes the selected connector.
 3. Places the local result before the connector's results.
-4. Completes the local result with the payload `Pong [destination]`.
+4. Completes the local result with `{version} --> [{destination}]`, using `Pong` for the version portion if unavailable.
 5. Returns the combined collection.
 
 The connector owns communication with the dependency. The runtime owns the

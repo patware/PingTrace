@@ -18,8 +18,9 @@ This page describes the current implementation. See
 | `PingTrace.Runtime` | Default execution and service registration | Core |
 | `PingTrace.AspNetCore` | Incoming HTTP endpoint mapping | Core |
 | `PingTrace.Adapter.HttpClient` | Outgoing HTTP dependency calls and adapter registration | Core, Runtime |
+| `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics and destination registration | Core, Runtime |
 
-All four libraries currently target .NET 10.
+All five libraries currently target .NET 10.
 
 The following arrows represent project references, not network requests:
 
@@ -29,6 +30,8 @@ flowchart TD
     AspNetCore["PingTrace.AspNetCore"] --> Core
     HttpAdapter["PingTrace.Adapter.HttpClient"] --> Core
     HttpAdapter --> Runtime
+    EfAdapter["PingTrace.Adapter.EntityFramework"] --> Core
+    EfAdapter --> Runtime
 ```
 
 The HTTP adapter references Runtime because its registration extensions
@@ -197,7 +200,7 @@ It does not create trace results or invoke dependency connectors.
 
 ### Local Trace
 
-Local Trace creates and completes one local result with the payload `Pong`.
+Local Trace creates and completes one local result. Its payload contains the managed entry assembly's version, falling back to `Pong` when the version is unavailable.
 
 It does not invoke dependency connectors.
 
@@ -219,7 +222,7 @@ For a registered dependency, the runtime:
 2. Creates the local trace result.
 3. Awaits the connector's trace operation.
 4. Appends the connector's results after the local result.
-5. Completes the local result with `Pong [destination]`.
+5. Completes the local result with `{version} --> [{destination}]`.
 6. Returns the collection.
 
 The runtime preserves the order of the results supplied by the connector.
@@ -340,10 +343,10 @@ An application can extend PingTrace at three points:
 | `IPingTraceConnector` | Communicate with another kind of dependency |
 | Builder extension methods | Register an adapter and its supporting services |
 
-An EF Core connector could use these boundaries without adding EF Core
-dependencies to Runtime or Core.
-
-Such an adapter is not implemented yet.
+The EF Core adapter uses these extension boundaries without adding EF Core
+dependencies to Runtime or Core. It registers a scoped connector, resolves
+the application's context when selected, and executes a SQL Server-specific
+diagnostic query.
 
 ## Current limits
 

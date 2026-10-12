@@ -36,6 +36,7 @@ Keep each concern in the library that owns it.
 | `PingTrace.Runtime` | Default behavior, dependency registration, and trace orchestration. |
 | `PingTrace.AspNetCore` | HTTP endpoint mapping and translation of results into HTTP responses. |
 | `PingTrace.Adapter.HttpClient` | Communication with HTTP destinations. |
+| `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through the application's registered DbContext. |
 
 Applications own their topology, destination addresses, credentials, and
 authorization policies.

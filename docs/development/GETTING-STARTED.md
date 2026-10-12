@@ -71,12 +71,13 @@ foreach ($project in $libraryProjects) {
 
 `dotnet build` restores dependencies unless instructed otherwise.
 
-This builds the four current libraries:
+This builds the five current libraries:
 
 - `PingTrace.Core`
 - `PingTrace.Runtime`
 - `PingTrace.AspNetCore`
 - `PingTrace.Adapter.HttpClient`
+- `PingTrace.Adapter.EntityFramework`
 
 A running container runtime is not required for this workflow.
 

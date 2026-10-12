@@ -114,19 +114,20 @@ Trace do not send HTTP requests.
 
 | Property | Current behavior |
 | --- | --- |
-| `Name` | Entry-assembly name in the default runtime |
-| `MachineName` | `Environment.MachineName` |
-| `Identity` | Environment domain and user name |
+| `Name` | Application name or dependency alias supplied by the implementation |
+| `MachineName` | Local machine name or connector-specific server identification |
+| `Identity` | Local execution identity or connector-specific identity |
 | `Payload` | A string |
 | `StartedAt` | `DateTime.Now` captured by the result constructor |
 | `FinishedAt` | `DateTime.Now` captured by `Finish(string)` |
 | `Elapsed` | `FinishedAt - StartedAt` |
 
-The default local payload is `Pong`. For a connector destination, the
-default runtime's local payload is `Pong [destination]`.
+The default local payload is the managed entry assembly's version, falling
+back to `Pong` when unavailable. For a connector destination, the default
+runtime's local payload is `{version} --> [{destination}]`.
 
-The current payload is not an object and does not default to the assembly
-version.
+Payload remains a string. Connectors supply their own diagnostic payloads;
+the SQL Server connector returns the current database name.
 
 The reported runtime identity does not necessarily identify credentials
 used for outgoing authentication.

@@ -89,6 +89,12 @@ public sealed class DefaultPingTrace : IPingTrace
     /// The token used to cancel the operation.
     /// </param>
     /// <returns>The completed local trace result.</returns>
+    /// <remarks>
+    /// The payload contains the managed entry assembly's version, allowing
+    /// callers to identify the responding application build. This is the
+    /// assembly version rather than the informational or package version.
+    /// If unavailable, the payload falls back to Pong.
+    /// </remarks>
     public Task<TraceResult> TraceAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -122,9 +128,16 @@ public sealed class DefaultPingTrace : IPingTrace
     /// The destination is not registered and is not the local application.
     /// </exception>
     /// <remarks>
+    /// A destination matching the local application name returns only the
+    /// local result with its version payload.
+    ///
+    /// For a connector destination, the local payload contains the entry
+    /// assembly version followed by " --> [destination]". The version portion
+    /// falls back to Pong when unavailable.
+    ///
     /// The local result is completed after the dependency responds so its
-    /// elapsed time includes the dependency call. Connector failures and
-    /// cancellation propagate to the caller.
+    /// elapsed time includes the dependency call. Connector results retain
+    /// their own payloads. Failures and cancellation propagate to the caller.
     /// </remarks>
     public async Task<IReadOnlyList<TraceResult>> TraceAsync(string destination, CancellationToken cancellationToken = default)
     {

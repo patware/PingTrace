@@ -10,6 +10,7 @@ The repository's `global.json` selects the test runner.
 | `PingTrace.Runtime.Tests` | Local tracing, connector selection, cancellation, failures, and service registration |
 | `PingTrace.Adapter.HttpClient.Tests` | Named clients, URI construction, response parsing, HTTP failures, and cancellation |
 | `PingTrace.AspNetCore.Tests` | Routing, response formats, validation, host error handling, and adapter-to-endpoint compatibility |
+| `PingTrace.Adapter.EntityFramework.Tests` | Database result mapping, query failures, cancellation, and deferred context resolution |
 
 The adapter-to-endpoint round-trip test currently belongs to
 `PingTrace.AspNetCore.Tests`. There is no separate
@@ -49,11 +50,18 @@ separate test project under `SampleApplications`.
 Library tests use substitutes, in-memory HTTP handlers, and ASP.NET Core
 TestServer.
 
-They do not require a running API, database, Redis instance, or Aspire host.
+They do not require an external API, database server, Redis instance, or
+Aspire host.
 
 The endpoint tests are integration tests at the ASP.NET Core boundary.
 Their in-memory hosting does not validate a deployed IIS configuration,
 real service discovery, TLS, or production authentication.
+
+EF adapter tests use an in-memory SQLite provider for relational infrastructure.
+A command interceptor substitutes readers or failures before the SQL
+Server-specific command executes. The substituted reader must match EF's
+generated projection order. These tests do not validate SQL Server syntax,
+connectivity, authentication, or permissions.
 
 ## Conventions
 

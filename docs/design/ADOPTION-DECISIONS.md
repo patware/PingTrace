@@ -293,8 +293,8 @@ Independent authorization for those endpoints remains planned work.
 
 ## 15. Organize tests around library responsibilities
 
-**Decision:** Maintain separate Runtime, AspNetCore, and HTTP adapter
-test projects.
+**Decision:** Maintain separate Runtime, AspNetCore, HTTP adapter, and
+Entity Framework adapter test projects.
 
 **Justification:** The boundaries make the behavior under test and required
 dependencies easier to identify.
@@ -307,6 +307,8 @@ dependencies easier to identify.
 - The adapter-to-endpoint round-trip test currently remains in the
   AspNetCore test project.
 - There is no dedicated Core or cross-library integration test project yet.
+- EF adapter tests exercise result materialization, query failure propagation,
+  cancellation, and deferred context resolution using intercepted commands.
 
 Tests use in-memory substitutes where practical. They do not replace
 deployment verification.
@@ -320,7 +322,7 @@ these shapes indefinitely.
 | --- | --- | --- |
 | Local Trace result | One object | Consistent collection response |
 | Destination Trace result | Collection | Preserve a useful representation as traversal evolves |
-| Payload | String, usually `Pong` or `Pong [destination]` | Structured payload and application-version default |
+| Payload | String; application assembly version or connector-specific diagnostics | Structured payload |
 | Duration | Difference between `DateTime.Now` timestamps | Monotonic duration measurement |
 | Result relationships | Flat ordered collection | Explicit paths or relationships if required by graph features |
 | HTTP methods | Explicit GET mappings | HEAD support on Ping |
@@ -339,7 +341,7 @@ The following remain design work:
 - Partial-failure representation.
 - Trace helper APIs.
 - Typed custom registration and application-default overrides.
-- EF Core adapter behavior.
+- Additional database providers and configurable diagnostic queries.
 - Health Checks integration.
 - Blazor visualization and path timing.
 

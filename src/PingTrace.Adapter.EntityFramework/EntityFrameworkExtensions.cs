@@ -12,11 +12,11 @@ namespace PingTrace.Adapter.EntityFramework;
 public static class EntityFrameworkExtensions
 {
     /// <summary>
-    /// Registers a named destination that checks database connectivity
-    /// through an existing DbContext registration.
+    /// Registers a named SQL Server diagnostic destination using an existing
+    /// DbContext registration.
     /// </summary>
     /// <typeparam name="TContext">
-    /// The registered DbContext type used to access the database.
+    /// The registered DbContext type configured to use SQL Server.
     /// </typeparam>
     /// <param name="builder">The PingTrace registration builder.</param>
     /// <param name="name">The destination name used when tracing.</param>
@@ -28,11 +28,17 @@ public static class EntityFrameworkExtensions
     /// <paramref name="name"/> is empty or consists only of whitespace.
     /// </exception>
     /// <remarks>
-    /// Register TContext separately with its database provider and options.
-    /// The connector shares the application's dependency-injection scope.
-    /// Context resolution is deferred until this destination is traced,
-    /// so local diagnostics do not construct database contexts.
-    /// The dependency-injection container owns context disposal.
+    /// Register TContext separately with the SQL Server provider and options.
+    /// The generic constraint accepts DbContext types, but the diagnostic
+    /// query uses SQL Server-specific functions.
+    ///
+    /// Registration adds a scoped connector and does not access the database.
+    /// Context resolution is deferred until this destination is traced.
+    /// The dependency-injection scope owns context disposal.
+    ///
+    /// The returned database result contains the server instance name,
+    /// current login name, and database name. Successful execution does not
+    /// validate application tables, migrations, or write permissions.
     /// </remarks>
     public static PingTraceBuilder AddDbContextDestination<TContext>(
         this PingTraceBuilder builder,

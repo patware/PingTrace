@@ -89,6 +89,7 @@ The current libraries target .NET 10.
 | `PingTrace.Runtime` | Default behavior, service registration, and dependency orchestration. |
 | `PingTrace.AspNetCore` | HTTP endpoints backed by an `IPingTrace` implementation. |
 | `PingTrace.Adapter.HttpClient` | Connectors that invoke remote HTTP Trace endpoints. |
+| `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through a registered DbContext. |
 
 Applications supply their destination addresses, authentication requirements,
 and authorization policies.

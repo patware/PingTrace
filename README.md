@@ -41,6 +41,9 @@ The libraries currently target .NET 10.
 The default application name comes from the managed host's entry assembly.
 No application ID or configuration callback is required.
 
+Local Trace reports the managed entry assembly's version, falling back to
+`Pong` when unavailable. Ping continues to return `Pong`.
+
 Ping and local Trace do not invoke dependencies.
 
 ## Add an HTTP dependency
@@ -93,6 +96,38 @@ It does not automatically trace that application's dependencies.
 
 The registration callback receives a `PingTraceBuilder` for registering
 adapters. It is not an application-options callback.
+
+## Add a SQL Server dependency
+
+Reference `PingTrace.Adapter.EntityFramework` and register a destination for
+an existing SQL Server DbContext:
+
+```csharp
+using PingTrace.Adapter.EntityFramework;
+
+builder.Services.AddPingTrace(pingTrace =>
+{
+    pingTrace.AddDbContextDestination<ApiServiceDbContext>("ApiServiceDb");
+});
+```
+
+Register and configure `ApiServiceDbContext` separately with `AddDbContext`
+and `UseSqlServer`.
+
+Request the API service's:
+
+```text
+/pingtrace/Trace?destination=ApiServiceDb
+```
+
+The response contains the application's result followed by the database's
+server instance name, current login name, and database name.
+
+The current adapter uses SQL Server-specific SQL. It does not validate
+application tables or migrations.
+
+See the [Entity Framework adapter guide](src/PingTrace.Adapter.EntityFramework/README.md)
+for configuration, result fields, lifetime, and test boundaries.
 
 ## Try the Aspire sample
 
@@ -184,6 +219,7 @@ notifications, and recovery actions.
 | `PingTrace.Runtime` | Default execution and dependency-injection registration |
 | `PingTrace.AspNetCore` | HTTP endpoint mapping |
 | `PingTrace.Adapter.HttpClient` | Invocation of remote HTTP Trace endpoints |
+| `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through a registered DbContext |
 
 Registration belongs to Runtime so non-HTTP hosts can use it. HTTP routing
 belongs to AspNetCore. Outgoing communication belongs to adapters.
@@ -205,8 +241,7 @@ is a future API improvement.
 
 ## Current boundaries and direction
 
-The current implementation supports Ping, local Trace, named destination
-Trace, and HTTP dependencies.
+The current implementation supports Ping, local Trace, named destination Trace, HTTP dependencies, and SQL Server diagnostics through EF Core.
 
 Version 1 excludes destination discovery.
 
@@ -214,10 +249,9 @@ Further work includes:
 
 - Recursive Trace All with bounded execution and cycle handling.
 - A consistent collection response for all Trace operations.
-- Structured payloads and an application-version default.
+- Structured payloads.
 - Helpers for constructing local and composite traces.
 - Explicit HTTP HEAD support on Ping.
-- An Entity Framework Core adapter using the application's configured context.
 - Optional Health Checks integration.
 - A Blazor viewer for diagnostic results and dependency paths.
 

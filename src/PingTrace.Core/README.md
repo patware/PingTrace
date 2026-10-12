@@ -20,6 +20,8 @@ For the default implementation and dependency registration, use
 
 HTTP destination support is provided by `PingTrace.Adapter.HttpClient`.
 
+SQL Server diagnostics through a registered DbContext are provided by `PingTrace.Adapter.EntityFramework`.
+
 ## Application contract
 
 `IPingTrace` exposes three operations:
@@ -83,13 +85,13 @@ introducing transport-specific requirements into the core contracts.
 
 ## Trace results
 
-`TraceResult` describes one application's contribution to a trace.
+`TraceResult` describes one application or dependency's contribution to a trace.
 
 | Member | Meaning |
 | --- | --- |
-| `Name` | Application name supplied by the implementation. |
-| `MachineName` | Machine name supplied by the implementation. |
-| `Identity` | Execution identity supplied by the implementation. |
+| `Name` | Application name or destination alias supplied by the implementation. |
+| `MachineName` | Machine or server identification supplied by the implementation. |
+| `Identity` | Execution or connection identity supplied by the implementation. |
 | `StartedAt` | Start timestamp, initialized to `DateTime.Now` by the constructor. |
 | `FinishedAt` | Completion timestamp, assigned by `Finish`. |
 | `Payload` | Diagnostic string assigned by `Finish`. |

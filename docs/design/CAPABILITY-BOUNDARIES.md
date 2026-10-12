@@ -16,8 +16,10 @@ This page separates implemented behavior from product direction.
 | HTTP endpoints | GET Ping and Trace, with an optional string route prefix |
 | HTTP dependencies | Named clients request a remote local Trace endpoint |
 | Cancellation | Passed from HTTP requests through runtime and connector calls |
-| Tests | Separate Runtime, AspNetCore, and HttpClient adapter projects |
-| Sample | Aspire Blazor frontend tracing its API dependency |
+| Default local payload | Entry-assembly version, falling back to Pong |
+| EF Core destination | SQL Server diagnostic query through a registered DbContext |
+| Tests | Separate Runtime, AspNetCore, HttpClient, and EntityFramework projects |
+| Sample | Aspire frontend tracing its API; API tracing its configured SQL Server database |
 
 The HTTP adapter expects the remote local Trace endpoint's current object
 response. Changing that response to an array requires coordinated adapter,
@@ -39,11 +41,9 @@ for HTTP clients. Using it does not introduce a PingTrace destination catalog.
 | Trace All | Recursively invoke configured dependencies |
 | Uniform Trace responses | Return collections consistently |
 | Structured payload | Support an object payload |
-| Default payload | Report application assembly version |
 | Trace helpers | Centralize result construction and completion |
 | HTTP HEAD | Support HEAD on Ping in the ASP.NET Core adapter |
 | Endpoint authorization | Allow anonymous Ping and protected Trace independently |
-| EF Core adapter | Reuse the application's configured DbContext |
 | Blazor viewer | Present results as a log, table, or dependency graph |
 
 These capabilities are not available merely because they appear in examples
@@ -81,13 +81,14 @@ registration conventions.
 Whether to introduce an optional adapter or inherit from `IHealthCheck`
 remains undecided. No integration is currently implemented.
 
-### Database observations
+### Database provider expansion
 
-Connectivity testing and a database diagnostic procedure provide different
-information.
+The implemented EF Core adapter reads SQL Server's server instance name,
+current login name, and database name. The application measures timing.
 
-A database adapter must distinguish observations made by the application
-from machine, identity, and payload information returned by the database.
+Support for additional providers and configurable diagnostic queries remains
+future design work. The existing generic DbContext constraint does not imply
+provider-independent SQL.
 
 ### Custom registration
 
