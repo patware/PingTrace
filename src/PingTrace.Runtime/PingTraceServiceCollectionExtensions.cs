@@ -32,6 +32,7 @@ public static class PingTraceServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.TryAddSingleton<TraceAllNode>();
         services.TryAddScoped<IPingTrace, DefaultPingTrace>();
 
         configure?.Invoke(new PingTraceBuilder(services));

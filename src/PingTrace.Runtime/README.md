@@ -21,7 +21,9 @@ using PingTrace.Runtime;
 builder.Services.AddPingTrace();
 ```
 
-This registers `DefaultPingTrace` as a scoped `IPingTrace` service.
+This registers `DefaultPingTrace` as a scoped `IPingTrace` service and
+`TraceAllNode` as a singleton. The shared node identity allows cycle detection
+to recognize the same application across request scopes.
 
 Consumers can receive `IPingTrace` through dependency injection. Its operations
 are:
@@ -31,6 +33,7 @@ are:
 | `Ping()` | The string `Pong`. |
 | `TraceAsync(cancellationToken)` | One local `TraceResult`. |
 | `TraceAsync(destination, cancellationToken)` | A collection containing the local result followed by any selected dependency results. |
+| `TraceAllAsync(request, cancellationToken)` | The local result followed by all registered destination results, recursively where supported. |
 
 Ping and local Trace do not invoke connectors.
 
@@ -86,7 +89,8 @@ builder.Services.AddPingTrace(pingTrace =>
 
 Replace the address with your API's address. The remote application must expose
 a compatible local Trace endpoint; the HTTP adapter's default path is
-`/pingtrace/Trace`.
+`/pingtrace/Trace`. Recursive tracing additionally requires the remote
+`/pingtrace/TraceAll` endpoint, or a configured alternative `traceAllPath`.
 
 The callback executes immediately during registration, before the service
 provider is built. It configures services rather than executing diagnostics.
@@ -160,10 +164,47 @@ returned results.
 The built-in HTTP connector requests the remote application's local Trace.
 It does not automatically trace that application's dependencies.
 
+### Recursive TraceAll
+
+Call `TraceAllAsync(cancellationToken: cancellationToken)` to begin a traversal.
+An optional `TraceAllRequest` can supply a smaller depth or earlier deadline.
+Create that request when starting the operation: its deadline is initialized
+at construction, not reset when reused.
+
+The runtime starts its local result, then visits connectors sequentially in
+case-insensitive ordinal name order. Recursive connectors receive the remaining
+depth, effective deadline, and a new ancestor array. Other connectors execute
+their existing `TraceAsync` operation as leaves. Sequential execution supports
+connectors sharing a scoped DbContext.
+
+The default depth is eight connector hops. Validation accepts at most sixteen
+hops including the ancestor path. Zero depth succeeds only when the application
+has no registered destinations. A repeated node or exhausted depth throws
+`InvalidOperationException`; dependency failures propagate and stop traversal.
+No partial result collection is returned.
+
+Each invocation uses the earlier of the incoming deadline and thirty seconds
+after execution begins. The runtime forwards that effective deadline and links
+caller cancellation to it. An expired deadline produces cancellation. Clocks
+should be synchronized, and connectors must honor cancellation; execution cannot
+be forcibly stopped. There is no separate total request or result-count limit.
+
+Shared dependencies are visited per path. Node identities last for the lifetime
+of their service provider, are distinct across application instances, and are
+not permanent application IDs or graph relationship fields.
+
+Results are flat and local-first. A leaf application's payload is its version
+(or `Pong`); an application with destinations uses `{version} --> [TraceAll]`.
+The local result finishes after all destinations complete.
+
+See the [execution guide](https://github.com/patware/Patware.PingTrace/blob/main/docs/architecture/PINGTRACE.md#recursive-traceall)
+for transport behavior and full traversal semantics.
+
 ### Timing
 
-The local result is completed after the selected connector responds. Its
-elapsed time therefore includes the connector operation and local processing.
+The local result is completed after the selected connector responds, or after
+all destinations complete for TraceAll. Its elapsed time includes dependency
+work and local processing. Parent and descendant durations overlap.
 
 This is not a direct measurement of network latency.
 
@@ -174,6 +215,8 @@ adjustments can affect the result.
 
 Both Trace overloads check cancellation before performing their work.
 Destination Trace passes the cancellation token to the selected connector.
+TraceAll also checks cancellation and passes a token linked to its deadline
+to each connector.
 
 For destination requests:
 
@@ -205,6 +248,11 @@ trace results. It must not add the calling application's local result.
 Keep connection configuration and protocol-specific behavior in the connector
 or its supporting services.
 
+Implement `IRecursivePingTraceConnector` when a dependency can continue TraceAll.
+Forward the supplied traversal context rather than starting a fresh traversal.
+Register recursive connectors as `IPingTraceConnector` so the runtime discovers
+them in its existing connector collection.
+
 ### Custom application behavior
 
 Applications can provide their own `IPingTrace` implementation through
@@ -222,14 +270,14 @@ duplicate connector registrations.
 
 ## Current scope
 
-The runtime supports local tracing and explicitly named destinations.
+The runtime supports local tracing, explicitly named destinations, and recursive
+TraceAll over registered connectors.
 
 It does not currently provide:
 
-- Trace All or automatic recursive traversal.
 - Dependency discovery.
 - Destination-path traversal.
-- Application IDs.
+- Permanent application IDs.
 - Built-in `IHealthCheck` integration.
 
 `PingTraceOptions` is currently unused. Configuring its `Name` property does

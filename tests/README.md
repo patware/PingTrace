@@ -7,9 +7,9 @@ The repository's `global.json` selects the test runner.
 
 | Project | Coverage |
 | --- | --- |
-| `PingTrace.Runtime.Tests` | Local tracing, connector selection, cancellation, failures, and service registration |
-| `PingTrace.Adapter.HttpClient.Tests` | Named clients, URI construction, response parsing, HTTP failures, and cancellation |
-| `PingTrace.AspNetCore.Tests` | Routing, response formats, validation, host error handling, and adapter-to-endpoint compatibility |
+| `PingTrace.Runtime.Tests` | Local and named tracing, recursive traversal, ordering, shared dependencies, cycles, depth, cancellation, failures, and service registration |
+| `PingTrace.Adapter.HttpClient.Tests` | Named clients, URI construction, recursive request serialization, response parsing, HTTP failures, and cancellation |
+| `PingTrace.AspNetCore.Tests` | Routing, response formats, invalid TraceAll POST validation, host error handling, and named-Trace adapter-to-endpoint compatibility |
 | `PingTrace.Adapter.EntityFramework.Tests` | Database result mapping, query failures, cancellation, and deferred context resolution |
 
 The adapter-to-endpoint round-trip test currently belongs to
@@ -73,9 +73,10 @@ connectivity, authentication, or permissions.
 - Use explicit completion signals instead of sleeps.
 - Avoid assertions that depend on machine speed or network latency.
 
-The current response contract is intentionally tested: local Trace returns
-an object, while destination Trace returns an array. Update the producer,
-consumer, and assertions together if that contract changes.
+Local Trace returns an object. Named destination Trace and TraceAll return
+arrays. Update the producer, consumer, and assertions together if those
+contracts change. Test method names describe the coverage currently present;
+implemented endpoints alone do not establish end-to-end test coverage.
 
 ## Validation claims
 

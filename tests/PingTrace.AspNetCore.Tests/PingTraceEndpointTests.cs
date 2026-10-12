@@ -15,6 +15,8 @@ using PingTrace.Adapter.HttpClient;
 using PingTrace.Core;
 using PingTrace.Runtime;
 
+using NetHttpClient = System.Net.Http.HttpClient;
+
 namespace PingTrace.AspNetCore.Tests;
 
 /// <summary>
@@ -36,7 +38,7 @@ public sealed class PingTraceEndpointTests
     {
         // Arrange
         await using WebApplication app = await CreateApplicationAsync();
-        using HttpClient client = app.GetTestClient();
+        using NetHttpClient client = app.GetTestClient();
 
         // Act
         using HttpResponseMessage response = await client.GetAsync("/pingtrace/Ping", TestContext.CancellationToken);
@@ -57,7 +59,7 @@ public sealed class PingTraceEndpointTests
     {
         // Arrange
         await using WebApplication app = await CreateApplicationAsync();
-        using HttpClient client = app.GetTestClient();
+        using NetHttpClient client = app.GetTestClient();
 
         // Act
         using HttpResponseMessage localResponse = await client.GetAsync(
@@ -105,7 +107,7 @@ public sealed class PingTraceEndpointTests
     {
         // Arrange
         await using WebApplication app = await CreateApplicationAsync();
-        using HttpClient client = app.GetTestClient();
+        using NetHttpClient client = app.GetTestClient();
 
         // Act
         using HttpResponseMessage response = await client.GetAsync("/pingtrace/Trace" + query, TestContext.CancellationToken);
@@ -136,7 +138,7 @@ public sealed class PingTraceEndpointTests
             services => services.AddScoped<IPingTraceConnector>(_ => connector),
             handleHttpFailure: true);
 
-        using HttpClient client = app.GetTestClient();
+        using NetHttpClient client = app.GetTestClient();
 
         // Act
         using HttpResponseMessage response = await client.GetAsync("/pingtrace/Trace?destination=ApiService", TestContext.CancellationToken);
@@ -154,7 +156,7 @@ public sealed class PingTraceEndpointTests
         // Arrange
         await using WebApplication app = await CreateApplicationAsync(prefix: "/diagnostics");
 
-        using HttpClient client = app.GetTestClient();
+        using NetHttpClient client = app.GetTestClient();
 
         // Act
         using HttpResponseMessage custom = await client.GetAsync("/diagnostics/Ping", TestContext.CancellationToken);
@@ -202,7 +204,7 @@ public sealed class PingTraceEndpointTests
                     () => remote.GetTestServer().CreateHandler());
             }));
 
-        using HttpClient client = frontend.GetTestClient();
+        using NetHttpClient client = frontend.GetTestClient();
 
         // Act
         using HttpResponseMessage response = await client.GetAsync("/pingtrace/Trace?destination=ApiService", TestContext.CancellationToken);
@@ -223,6 +225,57 @@ public sealed class PingTraceEndpointTests
 
         await remoteService.Received(1)
             .TraceAsync(Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Verifies that invalid recursive requests do not execute tracing.
+    /// </summary>
+    /// <param name="json">The invalid request body.</param>
+    /// <remarks>
+    /// Malformed JSON and invalid traversal state must produce bad-request
+    /// responses before invoking the runtime. Binding failures are configured
+    /// to return HTTP responses regardless of the test host's environment.
+    /// </remarks>
+    [TestMethod]
+    [DataRow("null")]
+    [DataRow("not-json")]
+    [DataRow("{\"remainingDepth\":-1}")]
+    [DataRow("{\"remainingDepth\":17}")]
+    [DataRow("{\"ancestors\":null}")]
+    [DataRow("{\"ancestors\":[\"00000000-0000-0000-0000-000000000000\"]}")]
+    [DataRow("{\"remainingDepth\":16,\"ancestors\":[\"11111111-1111-1111-1111-111111111111\"]}")]
+    [DataRow("{\"deadlineUtc\":\"0001-01-01T00:00:00+00:00\"}")]
+    public async Task TraceAll_InvalidPost_DoesNotInvokeRuntime(string json)
+    {
+        // Arrange
+        IPingTrace runtime = Substitute.For<IPingTrace>();
+
+        await using WebApplication app = await CreateApplicationAsync(
+            services =>
+            {
+                services.AddScoped<IPingTrace>(_ => runtime);
+                services.Configure<Microsoft.AspNetCore.Routing.RouteHandlerOptions>(
+                    options => options.ThrowOnBadRequest = false);
+            });
+
+        using NetHttpClient client = app.GetTestClient();
+        using StringContent content = new(
+            json,
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        // Act
+        using HttpResponseMessage response = await client.PostAsync(
+            "/pingtrace/TraceAll",
+            content,
+            TestContext.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await runtime.DidNotReceive().TraceAllAsync(
+            Arg.Any<TraceAllRequest>(),
+            Arg.Any<CancellationToken>());
     }
 
     private async Task<WebApplication> CreateApplicationAsync(

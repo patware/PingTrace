@@ -10,11 +10,12 @@ This page separates implemented behavior from product direction.
 | Local Trace | Returns one local `TraceResult` |
 | Named local Trace | Returns a one-element collection |
 | Named dependency Trace | Returns the local result followed by connector results |
+| TraceAll | Sequential recursive traversal with per-path cycle checks, depth limits, and cooperative deadlines |
 | Default application name | Managed entry-assembly name |
 | Registration | Parameterless or a `PingTraceBuilder` callback |
 | Custom implementation | An existing DI registration of `IPingTrace` is preserved |
-| HTTP endpoints | GET Ping and Trace, with an optional string route prefix |
-| HTTP dependencies | Named clients request a remote local Trace endpoint |
+| HTTP endpoints | GET Ping, Trace, and TraceAll; POST TraceAll; optional string route prefix |
+| HTTP dependencies | Named clients use GET for local Trace and POST with context for TraceAll |
 | Cancellation | Passed from HTTP requests through runtime and connector calls |
 | Default local payload | Entry-assembly version, falling back to Pong |
 | EF Core destination | SQL Server diagnostic query through a registered DbContext |
@@ -38,7 +39,6 @@ for HTTP clients. Using it does not introduce a PingTrace destination catalog.
 
 | Capability | Direction |
 | --- | --- |
-| Trace All | Recursively invoke configured dependencies |
 | Uniform Trace responses | Return collections consistently |
 | Structured payload | Support an object payload |
 | Trace helpers | Centralize result construction and completion |
@@ -51,16 +51,22 @@ or design discussions.
 
 ## Open design decisions
 
-### Recursive traversal
+### Further traversal controls
 
-Define cycle detection, maximum depth, execution budgets, cancellation,
-partial failures, and whether shared dependencies are visited per path.
+TraceAll already implements per-path cycle detection, sequential execution,
+and shared-dependency visits per path. Default depth is eight connector hops;
+validation accepts a maximum combined ancestor count and remaining depth of
+sixteen. An absolute deadline crosses process boundaries, with each runtime
+also applying a thirty-second cooperative cap.
 
-Traversal context must work across process boundaries.
+Failures stop traversal without returning partial results. Separate limits on
+total requests or results, structured partial failures, and graph relationships
+remain possible future work. See
+[recursive execution](../architecture/PINGTRACE.md#recursive-traceall).
 
 ### Destination routing
 
-The current runtime selects an immediate named connector. It does not
+Named destination Trace selects an immediate connector. It does not
 automatically route a request to a dependency behind another application.
 
 A future path representation must make that routing explicit.

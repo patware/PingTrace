@@ -18,6 +18,8 @@ public sealed class DefaultPingTrace : IPingTrace
         ?? throw new InvalidOperationException(
             "The host assembly name could not be determined.");
 
+    private readonly TraceAllNode _node;
+
     private readonly Dictionary<string, IPingTraceConnector> _connectors;
 
     /// <summary>
@@ -28,27 +30,39 @@ public sealed class DefaultPingTrace : IPingTrace
     }
 
     /// <summary>
-    /// Initializes a default implementation with configured dependencies.
+    /// Initializes an implementation with configured dependencies.
     /// </summary>
-    /// <param name="connectors">
-    /// The connectors available to this application.
-    /// </param>
-    /// <exception cref="ArgumentNullException">
-    /// The collection or one of its connectors is <see langword="null"/>.
-    /// </exception>
-    /// <exception cref="ArgumentException">
-    /// A connector name is empty, duplicates another name, or conflicts
-    /// with the local application name.
-    /// </exception>
+    /// <param name="connectors">The application's connectors.</param>
     /// <remarks>
-    /// Names are compared without regard to case. Rejecting ambiguous names
-    /// prevents a request from silently selecting the wrong dependency.
-    /// Connector constructors should not perform network operations.
+    /// Manually constructed runtimes receive their own node identity.
+    /// Dependency injection uses the constructor accepting a shared node.
     /// </remarks>
     public DefaultPingTrace(IEnumerable<IPingTraceConnector> connectors)
+        : this(connectors, new TraceAllNode())
+    {
+    }
+
+    /// <summary>
+    /// Initializes an implementation with configured dependencies and identity.
+    /// </summary>
+    /// <param name="connectors">The application's connectors.</param>
+    /// <param name="node">The application's shared runtime identity.</param>
+    /// <exception cref="ArgumentNullException">
+    /// The node, connector collection, or a connector is null.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// A connector name is empty, duplicated, or conflicts with the application.
+    /// </exception>
+    /// <remarks>
+    /// Sharing the node across request scopes allows recursive HTTP requests
+    /// to detect a return to the same application instance.
+    /// </remarks>
+    public DefaultPingTrace(IEnumerable<IPingTraceConnector> connectors, TraceAllNode node)
     {
         ArgumentNullException.ThrowIfNull(connectors);
+        ArgumentNullException.ThrowIfNull(node);
 
+        _node = node;
         _connectors = new Dictionary<string, IPingTraceConnector>(StringComparer.OrdinalIgnoreCase);
 
         foreach (IPingTraceConnector connector in connectors)
@@ -56,7 +70,8 @@ public sealed class DefaultPingTrace : IPingTrace
             ArgumentNullException.ThrowIfNull(connector);
             ArgumentException.ThrowIfNullOrWhiteSpace(connector.Name);
 
-            if (string.Equals(connector.Name, _name, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(
+                connector.Name, _name, StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException(
                     $"Destination '{connector.Name}' conflicts with " +
@@ -167,6 +182,118 @@ public sealed class DefaultPingTrace : IPingTrace
                     ?? "Pong";
 
         current.Finish($"{v} --> [{destination}]");
+
+        return results;
+    }
+
+    /// <inheritdoc />
+    /// <exception cref="ArgumentException">
+    /// The traversal request is invalid.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// A cycle is detected or the available depth is exhausted.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// Cancellation is requested or the execution deadline expires.
+    /// </exception>
+    /// <remarks>
+    /// A local result starts before any connector executes and finishes after
+    /// every destination completes. Sequential execution avoids concurrent
+    /// operations against a shared scoped DbContext.
+    ///
+    /// Each child receives a separate ancestor array. A shared dependency on
+    /// another branch is therefore traced again.
+    ///
+    /// Cancellation is cooperative. Connectors must observe their token;
+    /// these limits cannot forcibly terminate an uncooperative connector.
+    /// </remarks>
+    public async Task<IReadOnlyList<TraceResult>> TraceAllAsync(TraceAllRequest? request = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        request ??= new TraceAllRequest();
+        request.Validate();
+
+        // Snapshot caller-owned traversal state before awaiting any work.
+        Guid[] ancestors = request.Ancestors.ToArray();
+        int remainingDepth = request.RemainingDepth;
+
+        DateTimeOffset localDeadline = DateTimeOffset.UtcNow.AddSeconds(30);
+        DateTimeOffset deadline = request.DeadlineUtc < localDeadline
+            ? request.DeadlineUtc
+            : localDeadline;
+
+        using CancellationTokenSource execution = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        TimeSpan remainingTime = deadline - DateTimeOffset.UtcNow;
+
+        if (remainingTime <= TimeSpan.Zero)
+        {
+            execution.Cancel();
+        }
+        else
+        {
+            execution.CancelAfter(remainingTime);
+        }
+
+        CancellationToken token = execution.Token;
+        token.ThrowIfCancellationRequested();
+
+        if (Array.IndexOf(ancestors, _node.Id) >= 0)
+        {
+            throw new InvalidOperationException(
+                $"TraceAll detected a cycle at '{_name}'.");
+        }
+
+        if (remainingDepth == 0 && _connectors.Count != 0)
+        {
+            throw new InvalidOperationException(
+                $"TraceAll exhausted its depth at '{_name}'.");
+        }
+
+        TraceResult current = CreateLocalResult();
+        List<TraceResult> results = new() { current };
+
+        foreach (IPingTraceConnector connector in _connectors.Values.OrderBy(connector => connector.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            token.ThrowIfCancellationRequested();
+
+            IReadOnlyList<TraceResult> downstream;
+
+            if (connector is IRecursivePingTraceConnector recursive)
+            {
+                Guid[] childAncestors = new Guid[ancestors.Length + 1];
+                ancestors.CopyTo(childAncestors, 0);
+                childAncestors[^1] = _node.Id;
+
+                TraceAllRequest childRequest = new()
+                {
+                    RemainingDepth = remainingDepth - 1,
+                    DeadlineUtc = deadline,
+                    Ancestors = childAncestors
+                };
+
+                downstream = await recursive.TraceAllAsync(childRequest, token);
+            }
+            else
+            {
+                downstream = await connector.TraceAsync(token);
+            }
+
+            token.ThrowIfCancellationRequested();
+            results.AddRange(downstream);
+        }
+
+        token.ThrowIfCancellationRequested();
+
+        string version =
+            Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+            ?? "Pong";
+
+        current.Finish(
+            _connectors.Count == 0
+                ? version
+                : $"{version} --> [TraceAll]");
 
         return results;
     }

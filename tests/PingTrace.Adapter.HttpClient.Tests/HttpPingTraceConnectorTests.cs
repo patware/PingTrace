@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
@@ -21,6 +22,7 @@ namespace PingTrace.Adapter.HttpClient.Tests;
 [TestClass]
 public sealed class HttpPingTraceConnectorTests
 {
+
     /// <summary>
     /// Gets or sets the context supplied by MSTest.
     /// </summary>
@@ -147,82 +149,81 @@ public sealed class HttpPingTraceConnectorTests
     /// Verifies that unsuccessful responses remain HTTP failures.
     /// </summary>
     /// <param name="statusCode">The remote failure status.</param>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
+    /// <remarks>
+    /// Both transport implementations must preserve the remote status code.
+    /// </remarks>
     [TestMethod]
-    [DataRow(401)]
-    [DataRow(404)]
-    [DataRow(503)]
-    public async Task UnsuccessfulResponse_ThrowsHttpRequestException(int statusCode)
+    [DataRow(401, false)]
+    [DataRow(401, true)]
+    [DataRow(404, false)]
+    [DataRow(404, true)]
+    [DataRow(503, false)]
+    [DataRow(503, true)]
+    public async Task UnsuccessfulResponse_ThrowsHttpRequestException(
+        int statusCode,
+        bool recursive)
     {
         // Arrange
-        using ServiceProvider provider = CreateProvider((_, _) => Task.FromResult(new HttpResponseMessage((HttpStatusCode)statusCode)));
+        using ServiceProvider provider = CreateProvider(
+            (_, _) => Task.FromResult(
+                new HttpResponseMessage((HttpStatusCode)statusCode)));
 
         using IServiceScope scope = provider.CreateScope();
         IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
 
         // Act
-        Func<Task> act = () => sut.TraceAsync("ApiService", TestContext.CancellationToken);
+        Func<Task> act = () => recursive
+            ? sut.TraceAllAsync(cancellationToken: TestContext.CancellationToken)
+            : sut.TraceAsync("ApiService", TestContext.CancellationToken);
 
         // Assert
-        var assertion =
-            await act.Should().ThrowAsync<HttpRequestException>();
+        var assertion = await act.Should().ThrowAsync<HttpRequestException>();
 
         assertion.Which.StatusCode.Should().Be((HttpStatusCode)statusCode);
     }
 
     /// <summary>
-    /// Verifies rejection of missing or unnamed remote results.
+    /// Verifies that malformed JSON is rejected by both trace operations.
     /// </summary>
-    /// <param name="json">The invalid response body.</param>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
     [TestMethod]
-    [DataRow("null")]
-    [DataRow("{}")]
-    [DataRow("{\"name\":\" \"}")]
-    public async Task InvalidResult_IsRejected(string json)
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task MalformedJson_IsRejected(bool recursive)
     {
         // Arrange
-        using ServiceProvider provider = CreateProvider((_, _) => Task.FromResult(JsonResponse(json)));
+        using ServiceProvider provider = CreateProvider(
+            (_, _) => Task.FromResult(JsonResponse("not-json")));
 
         using IServiceScope scope = provider.CreateScope();
         IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
 
         // Act
-        Func<Task> act = () => sut.TraceAsync("ApiService", TestContext.CancellationToken);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    /// <summary>
-    /// Verifies that malformed JSON is not accepted as a successful trace.
-    /// </summary>
-    [TestMethod]
-    public async Task MalformedJson_IsRejected()
-    {
-        // Arrange
-        using ServiceProvider provider = CreateProvider((_, _) => Task.FromResult(JsonResponse("not-json")));
-
-        using IServiceScope scope = provider.CreateScope();
-        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
-
-        // Act
-        Func<Task> act = () => sut.TraceAsync("ApiService", TestContext.CancellationToken);
+        Func<Task> act = () => recursive
+            ? sut.TraceAllAsync(cancellationToken: TestContext.CancellationToken)
+            : sut.TraceAsync("ApiService", TestContext.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<JsonException>();
     }
 
     /// <summary>
-    /// Verifies cancellation of a request already executing in the handler.
+    /// Verifies cancellation of an HTTP request already executing.
     /// </summary>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
     /// <remarks>
-    /// The handler signals when the request starts. Cancellation therefore
-    /// occurs during transport execution rather than before invocation.
+    /// The handler signals when execution begins. Cancellation therefore
+    /// exercises the active transport rather than only an entry-point guard.
     /// </remarks>
     [TestMethod]
-    public async Task Cancellation_ReachesExecutingHttpRequest()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Cancellation_ReachesExecutingHttpRequest(bool recursive)
     {
         // Arrange
-        TaskCompletionSource<bool> entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> entered =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         using CancellationTokenSource cancellation =
             CancellationTokenSource.CreateLinkedTokenSource(
@@ -232,14 +233,20 @@ public sealed class HttpPingTraceConnectorTests
         {
             entered.TrySetResult(true);
             await Task.Delay(Timeout.InfiniteTimeSpan, token);
-            return JsonResponse("""{"name":"Remote"}""");
+
+            return JsonResponse(
+                recursive
+                    ? """[{"name":"Remote"}]"""
+                    : """{"name":"Remote"}""");
         });
 
         using IServiceScope scope = provider.CreateScope();
         IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
 
         // Act
-        Task<IReadOnlyList<TraceResult>> pending = sut.TraceAsync("ApiService", cancellation.Token);
+        Task<IReadOnlyList<TraceResult>> pending = recursive
+            ? sut.TraceAllAsync(cancellationToken: cancellation.Token)
+            : sut.TraceAsync("ApiService", cancellation.Token);
 
         try
         {
@@ -254,7 +261,9 @@ public sealed class HttpPingTraceConnectorTests
 
         Func<Task> act = async () =>
         {
-            await pending.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+            await pending.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.CancellationToken);
         };
 
         // Assert
@@ -262,10 +271,13 @@ public sealed class HttpPingTraceConnectorTests
     }
 
     /// <summary>
-    /// Verifies that missing client configuration fails before sending.
+    /// Verifies that a missing base address fails before sending a request.
     /// </summary>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
     [TestMethod]
-    public async Task MissingBaseAddress_IsRejectedBeforeSending()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task MissingBaseAddress_IsRejectedBeforeSending(bool recursive)
     {
         // Arrange
         ServiceCollection services = new();
@@ -278,8 +290,11 @@ public sealed class HttpPingTraceConnectorTests
                     new StubHandler((_, _) =>
                     {
                         requestCount++;
+
                         return Task.FromResult(JsonResponse(
-                            """{"name":"Remote"}"""));
+                            recursive
+                                ? """[{"name":"Remote"}]"""
+                                : """{"name":"Remote"}"""));
                     }));
         });
 
@@ -288,7 +303,9 @@ public sealed class HttpPingTraceConnectorTests
         IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
 
         // Act
-        Func<Task> act = () => sut.TraceAsync("ApiService", TestContext.CancellationToken);
+        Func<Task> act = () => recursive
+            ? sut.TraceAllAsync(cancellationToken: TestContext.CancellationToken)
+            : sut.TraceAsync("ApiService", TestContext.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -296,14 +313,25 @@ public sealed class HttpPingTraceConnectorTests
     }
 
     /// <summary>
-    /// Verifies rejection of paths that can select another server.
+    /// Verifies rejection of invalid local and recursive endpoint paths.
     /// </summary>
     /// <param name="path">The invalid endpoint path.</param>
+    /// <param name="recursive">Whether to validate the recursive path.</param>
+    /// <remarks>
+    /// Both configurable paths must remain relative to the configured server.
+    /// </remarks>
     [TestMethod]
-    [DataRow("https://other.test/Trace")]
-    [DataRow("//other.test/Trace")]
-    [DataRow(@"diagnostics\Trace")]
-    public void InvalidTracePath_IsRejected(string path)
+    [DataRow("https://other.test/Trace", false)]
+    [DataRow("https://other.test/Trace", true)]
+    [DataRow("//other.test/Trace", false)]
+    [DataRow("//other.test/Trace", true)]
+    [DataRow(@"diagnostics\Trace", false)]
+    [DataRow(@"diagnostics\Trace", true)]
+    [DataRow("", false)]
+    [DataRow("", true)]
+    [DataRow(" ", false)]
+    [DataRow(" ", true)]
+    public void InvalidTracePath_IsRejected(string path, bool recursive)
     {
         // Arrange
         ServiceCollection services = new();
@@ -311,29 +339,145 @@ public sealed class HttpPingTraceConnectorTests
         // Act
         Action act = () => services.AddPingTrace(builder =>
         {
-            builder.AddHttpDestination("ApiService", client =>
-            {
-                client.BaseAddress = new Uri("https://remote.test/");
-            }, path);
+            builder.AddHttpDestination(
+                "ApiService",
+                client =>
+                {
+                    client.BaseAddress = new Uri("https://remote.test/");
+                },
+                tracePath: recursive ? "/pingtrace/Trace" : path,
+                traceAllPath: recursive ? path : "/pingtrace/TraceAll");
         });
 
         // Assert
         act.Should().Throw<ArgumentException>()
-            .WithParameterName("tracePath");
+            .WithParameterName(recursive ? "traceAllPath" : "tracePath");
     }
 
-    private static ServiceProvider CreateProvider(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send, string tracePath = "/pingtrace/Trace")
+    /// <summary>
+    /// Verifies the recursive HTTP method, path, request body, and response.
+    /// </summary>
+    /// <param name="path">The configured recursive endpoint path.</param>
+    /// <param name="expectedUri">The expected destination URI.</param>
+    /// <remarks>
+    /// This exercises serialization through the public registration API.
+    /// It detects accidentally calling the local Trace endpoint or dropping
+    /// traversal state during transport.
+    /// </remarks>
+    [TestMethod]
+    [DataRow("/pingtrace/TraceAll", "https://remote.test/pingtrace/TraceAll")]
+    [DataRow("diagnostics/TraceAll", "https://remote.test/application/diagnostics/TraceAll")]
+    public async Task TraceAll_PostsTraversalStateAndReadsSubtree(
+        string path,
+        string expectedUri)
+    {
+        // Arrange
+        HttpMethod? observedMethod = null;
+        Uri? observedUri = null;
+        TraceAllRequest? observedRequest = null;
+
+        using ServiceProvider provider = CreateProvider(
+            async (message, token) =>
+            {
+                observedMethod = message.Method;
+                observedUri = message.RequestUri;
+                observedRequest =
+                    await message.Content!.ReadFromJsonAsync<TraceAllRequest>(
+                        cancellationToken: token);
+
+                return JsonResponse(
+                    """
+                [
+                  {"name":"RemoteApi","payload":"api"},
+                  {"name":"Database","payload":"db"}
+                ]
+                """);
+            },
+            traceAllPath: path);
+
+        using IServiceScope scope = provider.CreateScope();
+        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        Guid ancestor = Guid.NewGuid();
+        TraceAllRequest request = new()
+        {
+            RemainingDepth = 3,
+            Ancestors = new[] { ancestor }
+        };
+
+        Guid localNode = provider.GetRequiredService<TraceAllNode>().Id;
+
+        // Act
+        IReadOnlyList<TraceResult> results = await sut.TraceAllAsync(
+            request,
+            TestContext.CancellationToken);
+
+        // Assert
+        observedMethod.Should().Be(HttpMethod.Post);
+        observedUri.Should().Be(new Uri(expectedUri));
+
+        observedRequest.Should().NotBeNull();
+        observedRequest!.RemainingDepth.Should().Be(2);
+        observedRequest.Ancestors.Should().Equal(ancestor, localNode);
+        observedRequest.DeadlineUtc.Should().Be(request.DeadlineUtc);
+
+        results.Skip(1).Select(result => result.Name)
+            .Should().Equal("RemoteApi", "Database");
+        results.Skip(1).Select(result => result.Payload)
+            .Should().Equal("api", "db");
+
+        request.RemainingDepth.Should().Be(3);
+        request.Ancestors.Should().Equal(ancestor);
+    }
+
+    /// <summary>
+    /// Verifies rejection of empty or invalid recursive result collections.
+    /// </summary>
+    /// <param name="json">The invalid response body.</param>
+    [TestMethod]
+    [DataRow("null")]
+    [DataRow("[]")]
+    [DataRow("[null]")]
+    [DataRow("[{}]")]
+    [DataRow("[{\"name\":\" \"}]")]
+    [DataRow("[{\"name\":\"RemoteApi\"},null]")]
+    public async Task TraceAll_InvalidSubtree_IsRejected(string json)
+    {
+        // Arrange
+        using ServiceProvider provider = CreateProvider(
+            (_, _) => Task.FromResult(JsonResponse(json)));
+
+        using IServiceScope scope = provider.CreateScope();
+        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        // Act
+        Func<Task> act = () => sut.TraceAllAsync(
+            cancellationToken: TestContext.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+
+    private static ServiceProvider CreateProvider(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send,
+        string tracePath = "/pingtrace/Trace",
+        string traceAllPath = "/pingtrace/TraceAll")
     {
         ServiceCollection services = new();
 
         services.AddPingTrace(builder =>
         {
-            builder.AddHttpDestination("ApiService", client =>
-            {
-                client.BaseAddress =
-                    new Uri("https://remote.test/application/");
-            }, tracePath)
-            .ConfigurePrimaryHttpMessageHandler(() => new StubHandler(send));
+            builder.AddHttpDestination(
+                "ApiService",
+                client =>
+                {
+                    client.BaseAddress =
+                        new Uri("https://remote.test/application/");
+                },
+                tracePath,
+                traceAllPath)
+                .ConfigurePrimaryHttpMessageHandler(() => new StubHandler(send));
         });
 
         return BuildProvider(services);

@@ -40,6 +40,8 @@ dependency tracing.
 | `GET /pingtrace/Ping` | Returns `Pong` as plain text. |
 | `GET /pingtrace/Trace` | Returns one local trace object. |
 | `GET /pingtrace/Trace?destination=NAME` | Traces the named destination and returns a result array. |
+| `GET /pingtrace/TraceAll` | Starts recursive traversal of registered destinations and returns an array. |
+| `POST /pingtrace/TraceAll` | Continues traversal using the supplied JSON request context. |
 
 Destination tracing requires a registered connector unless the destination
 matches the local application's name.
@@ -112,12 +114,11 @@ and authorization policies.
 
 ## Current scope
 
-The implementation supports Ping, local Trace, and explicitly named
-destination Trace.
+The implementation supports Ping, local Trace, explicitly named destination
+Trace, and [recursive TraceAll](architecture/PINGTRACE.md#recursive-traceall).
 
-Trace All, automatic dependency discovery, recursive traversal, graph
-visualization, and built-in health-check integration are not currently
-implemented.
+Automatic dependency discovery, graph visualization, and built-in health-check
+integration are not currently implemented.
 
 The documentation distinguishes existing behavior from proposed capabilities.
 Design discussions do not imply that an API is available.
