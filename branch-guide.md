@@ -19,8 +19,14 @@ or reviews. Delete merged topic branches when they are no longer needed.
 with a prerelease suffix. The current `0.x` series is under active development;
 review the changelog for compatibility changes before upgrading.
 
-For a release, update `VERSION`, move the relevant Unreleased notes in
-[CHANGELOG.md](CHANGELOG.md) into a version heading with the actual release date,
-and build, test, and inspect the packages. After merging, tag the release commit
-as `v<version>`. A tag alone does not publish packages; publication is a separate
-maintainer action.
+For a release, update VERSION and prepare the matching CHANGELOG.md
+section, then merge the changes into main after CI passes.
+
+Run the Release workflow from main with the matching version and
+publish disabled to inspect a release candidate.
+
+To publish, run Release with publish enabled and inspect that run's
+candidate before approving the release environment. The workflow
+publishes the prepared packages and creates the GitHub release/tag.
+
+Do not create the release tag manually beforehand.

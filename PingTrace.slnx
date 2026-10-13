@@ -3,6 +3,12 @@
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />
     <File Path=".gitignore" />
+    <File Path="Build.ps1" />
+    <File Path="CHANGELOG.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="README.md" />
+    <File Path="VERSION" />
   </Folder>
   <Folder Name="/SampleApplications/">
     <Project Path="SampleApplications/AspireAppSample/AspireAppSample.ApiService/AspireAppSample.ApiService.csproj" />
@@ -14,10 +20,10 @@
   <Folder Name="/tests/">
     <Project Path="tests/PingTrace.Adapter.ActiveDirectory.Tests/PingTrace.Adapter.ActiveDirectory.Tests.csproj" Id="7ce54683-f9fb-4b89-834b-9bb71e99e004" />
     <Project Path="tests/PingTrace.Adapter.EntityFramework.Tests/PingTrace.Adapter.EntityFramework.Tests.csproj" Id="a05b592d-cd14-4223-93b1-659341d469dd" />
-    <Project Path="Tests/PingTrace.Adapter.HttpClient.Tests/PingTrace.Adapter.HttpClient.Tests.csproj" Id="f97d74fc-e99e-472f-8c5c-1ad0e3762f89" />
+    <Project Path="tests/PingTrace.Adapter.HttpClient.Tests/PingTrace.Adapter.HttpClient.Tests.csproj" Id="f97d74fc-e99e-472f-8c5c-1ad0e3762f89" />
     <Project Path="tests/PingTrace.Adapter.MicrosoftGraph.Tests/PingTrace.Adapter.MicrosoftGraph.Tests.csproj" Id="3cc7b174-1f0d-4f43-b763-42d8f7f66f75" />
     <Project Path="tests/PingTrace.AspNetCore.Tests/PingTrace.AspNetCore.Tests.csproj" Id="536389cb-14e8-45a2-8fd8-509f24b10605" />
-    <Project Path="Tests/PingTrace.Runtime.Tests/PingTrace.Runtime.Tests.csproj" Id="60e53ea6-77f2-4cf6-83db-f23da98b4793" />
+    <Project Path="tests/PingTrace.Runtime.Tests/PingTrace.Runtime.Tests.csproj" Id="60e53ea6-77f2-4cf6-83db-f23da98b4793" />
   </Folder>
   <Project Path="src/PingTrace.Adapter.ActiveDirectory/PingTrace.Adapter.ActiveDirectory.csproj" Id="112a6a9b-c445-4309-819d-c532a20fb109" />
   <Project Path="src/PingTrace.Adapter.EntityFramework/PingTrace.Adapter.EntityFramework.csproj" Id="65636246-b3cd-4e01-a4f8-2f6dc17b1348" />

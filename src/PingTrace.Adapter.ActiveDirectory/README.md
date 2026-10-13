@@ -118,6 +118,6 @@ dotnet test --project tests/PingTrace.Adapter.ActiveDirectory.Tests/PingTrace.Ad
 ```
 
 The Aspire sample has a separate simulated reader with configurable scenarios.
-See the [AD simulation walkthrough](../../docs/development/GETTING-STARTED.md#exercise-the-simulated-active-directory-destination).
+See the [AD simulation walkthrough](https://github.com/patware/Patware.PingTrace/blob/main/docs/development/GETTING-STARTED.md#exercise-the-simulated-active-directory-destination).
 Real-domain verification remains separate; successful simulated tests do not
 establish that the production LDAP integration works in a deployment.

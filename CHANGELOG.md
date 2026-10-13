@@ -7,34 +7,27 @@ published releases are identified by package and release date below.
 
 ### Changed
 
-- Custom `IPingTrace` implementations must implement the new `TraceAllAsync` member.
-- `AddHttpDestination` now accepts an optional `traceAllPath` parameter.
-  Existing source calls remain valid; previously compiled consumers should
-  be rebuilt against the updated packages.
+### Added
 
-- Default application traces now report the managed entry assembly's version,
-  falling back to `Pong` when unavailable.
-- A connector destination's local payload now uses
-  `{version} --> [{destination}]`. Ping continues to return `Pong`.
+## 0.1.0 - Pending publication
 
 ### Added
 
-- Recursive `IPingTrace.TraceAllAsync` with sequential traversal of registered
-  destinations and per-path visits to shared dependencies.
-- `TraceAllRequest`, `IRecursivePingTraceConnector`, and singleton `TraceAllNode`
-  support for traversal context and cycle detection across request scopes.
-- Default traversal limits of eight connector hops and a thirty-second
-  cooperative deadline. Cycles, exhausted depth, and failures stop traversal
-  without returning partial results.
-- GET and POST `/pingtrace/TraceAll` endpoints and configurable outgoing
-  `traceAllPath` support in the HTTP adapter.
-- TraceAll participation by existing leaf connectors, including EF diagnostics.
+- Initial NuGet release of the seven Patware.PingTrace packages for .NET 10.
+- Application Ping, local Trace, and named-destination Trace.
+- Recursive TraceAll with sequential traversal, cycle detection,
+  depth limits, and cooperative cancellation.
+- ASP.NET Core Ping, Trace, and GET/POST TraceAll endpoints.
+- HTTP tracing of remote PingTrace applications.
+- SQL Server diagnostics through Entity Framework Core.
+- Microsoft Graph organization diagnostics.
+- Active Directory diagnostics with an application-configured LDAP reader.
+- Package READMEs, XML documentation, and symbol packages.
 
-- `PingTrace.Adapter.EntityFramework` with
-  `AddDbContextDestination<TContext>(name)` for SQL Server diagnostics through
-  an existing DbContext registration.
-- Database results containing the server instance name, current login name,
-  and database name.
-- An `ApiServiceDb` destination in the Aspire API sample.
-- Isolated EF adapter tests for result mapping, query failure propagation,
-  cancellation, and deferred context resolution.
+### Current limitations
+
+- Local Trace returns an object; destination Trace and TraceAll return arrays.
+- Dependency failures stop traversal without returning partial success.
+- The Entity Framework adapter uses SQL Server-specific diagnostics.
+- Synchronous LDAP operations cannot be interrupted by cooperative cancellation.
+- Applications configure endpoint authentication and authorization.

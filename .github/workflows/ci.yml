@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  packages:
+    name: Libraries and packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Build, test, and pack
+        id: build
+        run: |
+          $packages = ./Build.ps1
+          "packages=$packages" >> $env:GITHUB_OUTPUT
+
+      - name: Validate packages and consumer
+        env:
+          PACKAGE_DIRECTORY: ${{ steps.build.outputs.packages }}
+        run: |
+          ./eng/Test-Packages.ps1 `
+            -PackageDirectory $env:PACKAGE_DIRECTORY `
+            -ExpectedCommit $env:GITHUB_SHA
+
+      - name: Retain validated packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: validated-packages-${{ github.sha }}
+          path: ${{ steps.build.outputs.packages }}
+          if-no-files-found: error
+          retention-days: 14

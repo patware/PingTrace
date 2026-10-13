@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
 
 using FluentAssertions;
@@ -29,6 +30,8 @@ public sealed class PingTraceEndpointTests
     /// Gets or sets the context supplied by MSTest.
     /// </summary>
     public TestContext TestContext { get; set; } = null!;
+
+    private static string ApplicationVersion => Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "Pong";
 
     /// <summary>
     /// Verifies the Ping status, media type, and response body.
@@ -217,7 +220,7 @@ public sealed class PingTraceEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         results.Should().NotBeNull();
         results!.Should().HaveCount(2);
-        results[0].Payload.Should().Be("0.0.1.0 --> [ApiService]");
+        results[0].Payload.Should().Be($"{ApplicationVersion} --> [ApiService]");
         results[1].Name.Should().Be("RemoteApi");
         results[1].MachineName.Should().Be("remote-machine");
         results[1].Identity.Should().Be("remote-identity");

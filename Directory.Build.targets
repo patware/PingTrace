@@ -1,5 +1,19 @@
 <Project>
-  <PropertyGroup Condition="'$(PackageId)' != '' and '$(IsPackable)' != 'false'">
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <Authors>Patware</Authors>
+    <Copyright>Copyright (c) 2026 Patrice Calvé</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/patware/Patware.PingTrace</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/patware/Patware.PingTrace</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageTags>pingtrace;diagnostics;tracing;dotnet</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>Release and upgrade notes: https://github.com/patware/Patware.PingTrace/releases/tag/v$(Version)</PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Update="README.md" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="/" />
+  </ItemGroup>
 </Project>

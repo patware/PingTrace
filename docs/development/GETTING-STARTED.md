@@ -397,16 +397,20 @@ Per-library README files and their package metadata are still being
 established. Do not assume a README is bundled until the project configuration
 and resulting package confirm it.
 
-### Current script limitations
+### Build and validate packages
 
-`Build.ps1` still contains an outdated library list. It names a `PingTrace`
-project that does not exist and omits current libraries.
+From the repository root:
 
-Use the explicit commands above until that list is corrected.
+```powershell
+$packages = ./Build.ps1
+./eng/Test-Packages.ps1 -PackageDirectory $packages
+```
 
-`eng/Test-Packages.ps1` currently defines helper functions but does not
-perform package verification. A successful invocation is not evidence
-that package contents or consumption have been tested.
+This builds the seven libraries, runs library tests, creates packages
+and symbol packages, validates their contents, and builds and runs
+an isolated package consumer.
+
+These checks do not run the Aspire sample tests or publish packages.
 
 ## Troubleshooting
 

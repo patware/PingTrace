@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
     <Version Condition="'$(Version)' == ''">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+    <IsPackable>false</IsPackable>
     <Deterministic>true</Deterministic>
     <DebugType>portable</DebugType>
     <IncludeSymbols>true</IncludeSymbols>

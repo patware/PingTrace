@@ -4,16 +4,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IsPackable>true</IsPackable>
+    <PackageId>Patware.PingTrace.AspNetCore</PackageId>
+    <Description>ASP.NET Core endpoints for PingTrace Ping, Trace, and TraceAll operations.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\PingTrace.Core\PingTrace.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

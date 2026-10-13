@@ -24,6 +24,7 @@ public sealed class DefaultPingTraceTests
     public TestContext TestContext { get; set; } = null!;
 
     private static string ApplicationName => Assembly.GetEntryAssembly()!.GetName().Name!;
+    private static string ApplicationVersion => Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "Pong";
 
     /// <summary>
     /// Verifies that Ping and local Trace do not invoke dependencies.
@@ -45,7 +46,7 @@ public sealed class DefaultPingTraceTests
         trace.MachineName.Should().Be(Environment.MachineName);
         trace.Identity.Should().Be(
             $"{Environment.UserDomainName}\\{Environment.UserName}");
-        trace.Payload.Should().Be("0.0.1.0");
+        trace.Payload.Should().Be(ApplicationVersion);
         trace.StartedAt.Should().NotBe(default);
         trace.FinishedAt.Should().NotBe(default);
 
@@ -69,7 +70,7 @@ public sealed class DefaultPingTraceTests
         // Assert
         TraceResult result = results.Should().ContainSingle().Subject;
         result.Name.Should().Be(ApplicationName);
-        result.Payload.Should().Be("0.0.1.0");
+        result.Payload.Should().Be(ApplicationVersion);
 
         await connector.DidNotReceive()
             .TraceAsync(Arg.Any<CancellationToken>());
@@ -103,7 +104,7 @@ public sealed class DefaultPingTraceTests
         results.Select(result => result.Name)
             .Should().Equal(ApplicationName, "RemoteApi", "Database");
 
-        results[0].Payload.Should().Be("0.0.1.0 --> [apiservice]");
+        results[0].Payload.Should().Be($"{ApplicationVersion} --> [apiservice]");
         results[0].FinishedAt.Should().NotBe(default);
         results[1].Should().BeSameAs(remote);
         results[2].Should().BeSameAs(database);
