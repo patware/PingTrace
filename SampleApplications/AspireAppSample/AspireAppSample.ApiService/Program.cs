@@ -1,8 +1,12 @@
 using AspireAppSample.ApiService;
+using AspireAppSample.ApiService.Services.Simulator;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
+using Microsoft.Kiota.Abstractions.Authentication;
 
 using PingTrace.Adapter.EntityFramework;
+using PingTrace.Adapter.MicrosoftGraph;
 using PingTrace.AspNetCore;
 using PingTrace.Runtime;
 
@@ -33,7 +37,33 @@ builder.Services.AddDbContext<ApiServiceDbContext>(options =>
 builder.Services.AddPingTrace(pingTrace =>
 {
     pingTrace.AddDbContextDestination<ApiServiceDbContext>("ApiServiceDb");
+
+    pingTrace.AddGraphOrganizationDestination(
+        name: "MicrosoftGraph",
+        configuredIdentity: "SIMULATED; tenant:sample-tenant; app:sample-app");
 });
+
+
+/* This is to simulate and validate the PingTrace.Adapter.MicrosoftGraph */
+
+builder.Services.AddTransient<SimulatedGraphHttpMessageHandler>();
+
+builder.Services
+    .AddHttpClient("SimulatedGraph")
+    .ConfigurePrimaryHttpMessageHandler<SimulatedGraphHttpMessageHandler>();
+
+builder.Services.AddScoped<GraphServiceClient>(provider =>
+{
+    var factory = provider.GetRequiredService<IHttpClientFactory>();
+
+    return new GraphServiceClient(
+        factory.CreateClient("SimulatedGraph"),
+        new AnonymousAuthenticationProvider(),
+        "https://graph.simulated/v1.0");
+});
+
+
+
 
 var app = builder.Build();
 

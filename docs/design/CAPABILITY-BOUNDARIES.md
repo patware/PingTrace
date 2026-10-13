@@ -19,8 +19,15 @@ This page separates implemented behavior from product direction.
 | Cancellation | Passed from HTTP requests through runtime and connector calls |
 | Default local payload | Entry-assembly version, falling back to Pong |
 | EF Core destination | SQL Server diagnostic query through a registered DbContext |
-| Tests | Separate Runtime, AspNetCore, HttpClient, and EntityFramework projects |
-| Sample | Aspire frontend tracing its API; API tracing its configured SQL Server database |
+| Microsoft Graph destination | Organization metadata through a registered GraphServiceClient, with a fixed configured identity label |
+| Tests | Separate Runtime, AspNetCore, HttpClient, EntityFramework, and MicrosoftGraph projects |
+| Sample | Aspire frontend tracing its API; API tracing its configured SQL Server database and simulated Graph organization |
+
+The Graph adapter's identity is supplied configuration metadata, not a
+server-returned identity assertion. Its organization read does not verify Teams
+access. AD and Teams-specific adapters are not currently implemented. The
+sample simulation and isolated Graph tests do not establish live Microsoft
+authentication or permission compatibility.
 
 The HTTP adapter expects the remote local Trace endpoint's current object
 response. Changing that response to an array requires coordinated adapter,

@@ -14,11 +14,13 @@
   <Folder Name="/tests/">
     <Project Path="tests/PingTrace.Adapter.EntityFramework.Tests/PingTrace.Adapter.EntityFramework.Tests.csproj" Id="a05b592d-cd14-4223-93b1-659341d469dd" />
     <Project Path="Tests/PingTrace.Adapter.HttpClient.Tests/PingTrace.Adapter.HttpClient.Tests.csproj" Id="f97d74fc-e99e-472f-8c5c-1ad0e3762f89" />
+    <Project Path="tests/PingTrace.Adapter.MicrosoftGraph.Tests/PingTrace.Adapter.MicrosoftGraph.Tests.csproj" Id="3cc7b174-1f0d-4f43-b763-42d8f7f66f75" />
     <Project Path="tests/PingTrace.AspNetCore.Tests/PingTrace.AspNetCore.Tests.csproj" Id="536389cb-14e8-45a2-8fd8-509f24b10605" />
     <Project Path="Tests/PingTrace.Runtime.Tests/PingTrace.Runtime.Tests.csproj" Id="60e53ea6-77f2-4cf6-83db-f23da98b4793" />
   </Folder>
   <Project Path="src/PingTrace.Adapter.EntityFramework/PingTrace.Adapter.EntityFramework.csproj" Id="65636246-b3cd-4e01-a4f8-2f6dc17b1348" />
   <Project Path="src/PingTrace.Adapter.HttpClient/PingTrace.Adapter.HttpClient.csproj" Id="8e78fee2-fd74-482a-8a89-e76b440bf151" />
+  <Project Path="src/PingTrace.Adapter.MicrosoftGraph/PingTrace.Adapter.MicrosoftGraph.csproj" Id="8f6598e1-59e9-48f1-bb0a-8665c3d01eae" />
   <Project Path="src/PingTrace.AspNetCore/PingTrace.AspNetCore.csproj" Id="30020ec9-0597-493c-8a86-7491acdd3c1f" />
   <Project Path="src/PingTrace.Core/PingTrace.Core.csproj" Id="0c942059-0efb-4e2a-aa4f-39a4728f2ab7" />
   <Project Path="src/PingTrace.Runtime/PingTrace.Runtime.csproj" Id="5a1b7ccf-5559-4929-9d7a-262b115ded7b" />

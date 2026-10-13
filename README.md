@@ -131,6 +131,19 @@ application tables or migrations.
 See the [Entity Framework adapter guide](src/PingTrace.Adapter.EntityFramework/README.md)
 for configuration, result fields, lifetime, and test boundaries.
 
+## Add a Microsoft Graph dependency
+
+Reference `PingTrace.Adapter.MicrosoftGraph` and register the application's
+configured `GraphServiceClient` separately. Add a destination using
+`AddGraphOrganizationDestination("MicrosoftGraph", "tenant:...; app:...")`
+inside the PingTrace registration callback.
+
+The adapter reads organization metadata and reports the configured API host,
+identity label, tenant ID, display name, and verified domain names. It does not
+establish access to Teams resources. See the
+[Microsoft Graph adapter guide](src/PingTrace.Adapter.MicrosoftGraph/README.md)
+for registration, identity semantics, and test boundaries.
+
 ## Trace all registered dependencies
 
 Request the application's:
@@ -149,6 +162,7 @@ For the Aspire sample, calling the frontend returns results for:
 AspireAppSample.Web
 AspireAppSample.ApiService
 ApiServiceDb
+MicrosoftGraph
 ```
 
 The default traversal permits eight connector hops and uses a thirty-second
@@ -188,6 +202,12 @@ The sample configures Aspire service discovery for its HTTP clients.
 Its `https+http://apiservice` address relies on that configuration.
 
 See [development setup](docs/development/GETTING-STARTED.md).
+
+The API also registers a simulated Microsoft Graph destination using the real
+Graph SDK and adapter. It requires no Microsoft account or tenant. Open the
+API service's `/pingtrace/Trace?destination=MicrosoftGraph` to exercise it.
+See the [simulation walkthrough](docs/development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination)
+for success, failure, and delay scenarios.
 
 ## Diagnose deployments
 
@@ -252,6 +272,7 @@ notifications, and recovery actions.
 | `PingTrace.AspNetCore` | HTTP endpoint mapping |
 | `PingTrace.Adapter.HttpClient` | Invocation of remote HTTP Trace endpoints |
 | `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through a registered DbContext |
+| `PingTrace.Adapter.MicrosoftGraph` | Organization diagnostics through a registered GraphServiceClient |
 
 Registration belongs to Runtime so non-HTTP hosts can use it. HTTP routing
 belongs to AspNetCore. Outgoing communication belongs to adapters.
@@ -274,7 +295,8 @@ is a future API improvement.
 ## Current boundaries and direction
 
 The current implementation supports Ping, local Trace, named destination Trace,
-recursive TraceAll, HTTP dependencies, and SQL Server diagnostics through EF Core.
+recursive TraceAll, HTTP dependencies, SQL Server diagnostics through EF Core,
+and Microsoft Graph organization diagnostics.
 
 Version 1 excludes destination discovery.
 

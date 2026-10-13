@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\src\PingTrace.Adapter.EntityFramework\PingTrace.Adapter.EntityFramework.csproj" />
     <ProjectReference Include="..\..\..\src\PingTrace.AspNetCore\PingTrace.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\src\PingTrace.Runtime\PingTrace.Runtime.csproj" />
+    <ProjectReference Include="..\..\..\src\PingTrace.Adapter.MicrosoftGraph\PingTrace.Adapter.MicrosoftGraph.csproj" />
     <ProjectReference Include="..\AspireAppSample.ServiceDefaults\AspireAppSample.ServiceDefaults.csproj" />
   </ItemGroup>
 
