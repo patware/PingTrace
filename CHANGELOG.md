@@ -9,7 +9,7 @@ published releases are identified by package and release date below.
 
 ### Added
 
-## 0.1.0 - Pending publication
+## 0.1.0 - 2026.10.13
 
 ### Added
 
