@@ -93,12 +93,16 @@ The current libraries target .NET 10.
 | `PingTrace.Adapter.HttpClient` | Connectors that invoke remote HTTP Trace endpoints. |
 | `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through a registered DbContext. |
 | `PingTrace.Adapter.MicrosoftGraph` | Organization diagnostics through a registered GraphServiceClient. |
+| `PingTrace.Adapter.ActiveDirectory` | Domain diagnostics through a registered directory reader. |
 
 Applications supply their destination addresses, authentication requirements,
 and authorization policies.
 
 The Aspire sample includes a simulated Graph destination that requires no
 Microsoft tenant. See the [simulation walkthrough](development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination).
+
+The sample also includes [simulated AD diagnostics](development/GETTING-STARTED.md#exercise-the-simulated-active-directory-destination)
+using the real connector with a substituted reader, without a domain controller.
 
 ## Find your next step
 

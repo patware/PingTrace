@@ -12,6 +12,7 @@ The repository's `global.json` selects the test runner.
 | `PingTrace.AspNetCore.Tests` | Routing, response formats, invalid TraceAll POST validation, host error handling, and named-Trace adapter-to-endpoint compatibility |
 | `PingTrace.Adapter.EntityFramework.Tests` | Database result mapping, query failures, cancellation, and deferred context resolution |
 | `PingTrace.Adapter.MicrosoftGraph.Tests` | Organization request and result mapping, Graph errors, invalid responses, cancellation, deferred resolution, and client ownership |
+| `PingTrace.Adapter.ActiveDirectory.Tests` | Domain result mapping, token forwarding, deferred reader resolution, original failures, incomplete results, and cooperative cancellation |
 
 The adapter-to-endpoint round-trip test currently belongs to
 `PingTrace.AspNetCore.Tests`. There is no separate
@@ -73,6 +74,12 @@ For interactive testing, the Aspire sample has its own configurable Graph
 handler. See the [simulation walkthrough](../docs/development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination).
 The sample's factory-created client also inherits its HTTP resilience settings;
 the isolated test transport does not reproduce that entire middleware pipeline.
+
+AD adapter tests substitute `IActiveDirectoryDiagnosticsReader` and execute the
+real connector. They do not instantiate the LDAP reader or validate its bind,
+queries, native response parsing, authentication, permissions, or cancellation
+of synchronous calls. Live LDAP verification requires a connected environment.
+See the [AD sample walkthrough](../docs/development/GETTING-STARTED.md#exercise-the-simulated-active-directory-destination).
 
 ## Conventions
 

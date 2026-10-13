@@ -15,6 +15,7 @@ Library tests live in projects corresponding to the libraries they exercise:
 - `PingTrace.AspNetCore.Tests`
 - `PingTrace.Adapter.EntityFramework.Tests`
 - `PingTrace.Adapter.MicrosoftGraph.Tests`
+- `PingTrace.Adapter.ActiveDirectory.Tests`
 
 The adapter-to-endpoint round-trip test currently lives in
 `PingTrace.AspNetCore.Tests`.
@@ -159,6 +160,13 @@ and use the application's authenticated client in production.
 
 See the [sample walkthrough](GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination)
 for interactive success, error, and delay scenarios.
+
+AD tests replace the directory reader while exercising the real connector.
+They cover mapping, deferred resolution, failures, incomplete results, and
+cooperative cancellation. They do not test the built-in LDAP reader's bind,
+queries, parsing, or native authentication. Cancellation of a simulated reader
+does not prove interruption of synchronous LDAP calls. See the
+[AD simulation walkthrough](GETTING-STARTED.md#exercise-the-simulated-active-directory-destination).
 
 ## Make asynchronous tests deterministic
 

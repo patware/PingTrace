@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
 using Microsoft.Kiota.Abstractions.Authentication;
 
+using PingTrace.Adapter.ActiveDirectory;
 using PingTrace.Adapter.EntityFramework;
 using PingTrace.Adapter.MicrosoftGraph;
 using PingTrace.AspNetCore;
@@ -21,6 +22,8 @@ builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+/* This is to simulate and validate the PingTrace.Adapter.EntityFramework */
+
 var connectionString = builder.Configuration.GetConnectionString("ApiService");
 
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -32,15 +35,6 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<ApiServiceDbContext>(options =>
 {
     options.UseSqlServer(connectionString);
-});
-
-builder.Services.AddPingTrace(pingTrace =>
-{
-    pingTrace.AddDbContextDestination<ApiServiceDbContext>("ApiServiceDb");
-
-    pingTrace.AddGraphOrganizationDestination(
-        name: "MicrosoftGraph",
-        configuredIdentity: "SIMULATED; tenant:sample-tenant; app:sample-app");
 });
 
 
@@ -62,6 +56,29 @@ builder.Services.AddScoped<GraphServiceClient>(provider =>
         "https://graph.simulated/v1.0");
 });
 
+/* This is to simulate and validate the PingTrace.Adapter.ActiveDirectory */
+
+builder.Services.AddScoped<SimulatedActiveDirectoryDiagnosticsReader>();
+
+
+
+
+builder.Services.AddPingTrace(pingTrace =>
+{
+    /* This is to simulate and validate the PingTrace.Adapter.EntityFramework */
+    pingTrace.AddDbContextDestination<ApiServiceDbContext>("ApiServiceDb");
+
+    /* This is to simulate and validate the PingTrace.Adapter.MicrosoftGraph */
+    pingTrace.AddGraphOrganizationDestination(
+        name: "MicrosoftGraph",
+        configuredIdentity: "SIMULATED; tenant:sample-tenant; app:sample-app");
+
+    /* This is to simulate and validate the PingTrace.Adapter.ActiveDirectory */
+    pingTrace.AddActiveDirectoryDestination<
+        SimulatedActiveDirectoryDiagnosticsReader>(
+            "ActiveDirectory",
+            @"SIMULATED; CONTOSO\sample-app");
+});
 
 
 

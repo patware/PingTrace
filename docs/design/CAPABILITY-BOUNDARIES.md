@@ -20,14 +20,21 @@ This page separates implemented behavior from product direction.
 | Default local payload | Entry-assembly version, falling back to Pong |
 | EF Core destination | SQL Server diagnostic query through a registered DbContext |
 | Microsoft Graph destination | Organization metadata through a registered GraphServiceClient, with a fixed configured identity label |
-| Tests | Separate Runtime, AspNetCore, HttpClient, EntityFramework, and MicrosoftGraph projects |
-| Sample | Aspire frontend tracing its API; API tracing its configured SQL Server database and simulated Graph organization |
+| Active Directory destination | Domain diagnostics through a registered reader; included LDAP reader binds and reads RootDSE and the domain object |
+| Tests | Separate Runtime, AspNetCore, HttpClient, EntityFramework, MicrosoftGraph, and ActiveDirectory projects |
+| Sample | Aspire frontend tracing its API; API tracing SQL Server plus simulated Graph and AD destinations |
 
 The Graph adapter's identity is supplied configuration metadata, not a
 server-returned identity assertion. Its organization read does not verify Teams
-access. AD and Teams-specific adapters are not currently implemented. The
+access. A Teams-specific adapter is not currently implemented. The
 sample simulation and isolated Graph tests do not establish live Microsoft
 authentication or permission compatibility.
+
+AD tests and sample simulation replace the directory reader; they do not execute
+the production LDAP implementation. That implementation uses synchronous calls
+and checks cancellation between operations, so a traversal deadline cannot
+forcibly interrupt an executing LDAP call. Its configured identity label is not
+a server-returned identity assertion.
 
 The HTTP adapter expects the remote local Trace endpoint's current object
 response. Changing that response to an array requires coordinated adapter,

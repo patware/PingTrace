@@ -38,6 +38,9 @@ To run the Aspire sample, also provide:
 The Graph destination is simulated and needs no Microsoft account, tenant,
 credentials, or Microsoft network access. Other sample prerequisites still apply.
 
+The Active Directory destination also uses a simulated reader and requires no
+domain controller, domain membership, or LDAP credentials.
+
 DocFX is needed only when generating the documentation site.
 
 ## Repository layout
@@ -77,7 +80,7 @@ foreach ($project in $libraryProjects) {
 
 `dotnet build` restores dependencies unless instructed otherwise.
 
-This builds the six current libraries:
+This builds the seven current libraries:
 
 - `PingTrace.Core`
 - `PingTrace.Runtime`
@@ -85,6 +88,7 @@ This builds the six current libraries:
 - `PingTrace.Adapter.HttpClient`
 - `PingTrace.Adapter.EntityFramework`
 - `PingTrace.Adapter.MicrosoftGraph`
+- `PingTrace.Adapter.ActiveDirectory`
 
 A running container runtime is not required for this workflow.
 
@@ -249,8 +253,8 @@ The current endpoint propagates dependency exceptions to host error handling.
 A simulated Graph 401 or 403 normally results in a PingTrace HTTP 500, not a
 matching HTTP status. Inspect API logs for the underlying Graph error.
 
-Ping and local Trace do not invoke Graph. `/pingtrace/TraceAll` invokes both
-`ApiServiceDb` and `MicrosoftGraph`, and stops on a dependency failure. Use the
+Ping and local Trace do not invoke Graph. `/pingtrace/TraceAll` invokes
+`ActiveDirectory`, `ApiServiceDb`, and `MicrosoftGraph`, and stops on a dependency failure. Use the
 destination-specific request above to exercise Graph without querying SQL
 Server; the API still requires its connection-string setting at startup.
 
@@ -259,6 +263,69 @@ and the HTTP endpoint path. It does not validate real authentication,
 permissions, DNS, TLS, or Microsoft service behavior, and it does not create a
 separate Aspire resource. Consumers replace the sample's client registration
 with their authenticated Graph client while retaining the same adapter.
+
+### Exercise the simulated Active Directory destination
+
+Open the **apiservice** endpoint from the Aspire dashboard and request:
+
+```text
+/pingtrace/Trace?destination=ActiveDirectory
+```
+
+Expect the API's local result followed by a directory result with:
+
+- `Name`: `ActiveDirectory`
+- `MachineName`: `dc01.contoso.example`
+- `Identity`: `SIMULATED; CONTOSO\sample-app`
+- `Payload`: a JSON-encoded string containing `DomainDistinguishedName` set to
+  `DC=contoso,DC=example`, `DomainObjectName` set to `contoso`,
+  `IdentitySource` set to `ConfiguredAuthentication`, and `Probe` set to `DomainRead`.
+
+The API registers `SimulatedActiveDirectoryDiagnosticsReader` from
+`Services/Simulator` and selects it through
+`AddActiveDirectoryDestination<SimulatedActiveDirectoryDiagnosticsReader>`.
+The real connector runs, but no LDAP connection is created. The controller name
+is simulated data, not an address to contact. This simulation is always registered
+in the current sample and does not create a separate Aspire resource.
+
+Edit this section in `AspireAppSample.ApiService/appsettings.Development.json`:
+
+```json
+"ActiveDirectorySimulation": {
+  "Scenario": "Success",
+  "DelayMilliseconds": 100
+}
+```
+
+Preserve the other settings. Configuration is read on each call; restart the API
+if changes have not reloaded or inspect higher-priority overrides.
+
+| Scenario | Behavior |
+| --- | --- |
+| `Success` | Returns the simulated domain diagnostics |
+| `Incomplete` | Returns a blank controller name; the connector rejects the result |
+| `Unauthorized` | Throws a simulated `UnauthorizedAccessException` |
+| `Unavailable` | Throws a simulated `IOException` |
+
+Names are case-insensitive. Negative delays and unknown scenarios fail
+explicitly. The delay observes cancellation. There is no HTTP transport or
+automatic retry pipeline around this reader, unlike the sample's Graph client.
+These failure categories do not reproduce native LDAP exception types.
+
+Failures propagate to the host's exception handler and normally produce HTTP
+500, including `Unauthorized`. Ping and local Trace do not resolve the reader.
+The destination-specific request does not query SQL Server or Graph, though
+the API still requires its database connection-string setting at startup.
+TraceAll visits all three API destinations in name order and stops on failure.
+
+This simulation validates connector mapping and application wiring. It does not
+execute the built-in LDAP reader or validate binding, LDAP queries, response
+parsing, authentication, or permissions. Its cooperative cancellation does not
+establish cancellation of native LDAP calls. The production reader checks
+cancellation between synchronous calls; configure a finite connection timeout.
+
+For production registration and connection ownership, see the
+[Active Directory adapter guide](../../src/PingTrace.Adapter.ActiveDirectory/README.md).
 
 ## Preview the documentation
 

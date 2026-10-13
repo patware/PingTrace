@@ -20,8 +20,9 @@ This page describes the current implementation. See
 | `PingTrace.Adapter.HttpClient` | Outgoing HTTP dependency calls and adapter registration | Core, Runtime |
 | `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics and destination registration | Core, Runtime |
 | `PingTrace.Adapter.MicrosoftGraph` | Organization diagnostics and destination registration | Core, Runtime |
+| `PingTrace.Adapter.ActiveDirectory` | Domain diagnostics, LDAP reader, and destination registration | Core, Runtime |
 
-All six libraries currently target .NET 10.
+All seven libraries currently target .NET 10.
 
 The following arrows represent project references, not network requests:
 
@@ -35,6 +36,8 @@ flowchart TD
     EfAdapter --> Runtime
     GraphAdapter["PingTrace.Adapter.MicrosoftGraph"] --> Core
     GraphAdapter --> Runtime
+    AdAdapter["PingTrace.Adapter.ActiveDirectory"] --> Core
+    AdAdapter --> Runtime
 ```
 
 The HTTP adapter references Runtime because its registration extensions
@@ -315,9 +318,9 @@ Consequently, adding dependencies to the API would not make this frontend
 request recursively visit them.
 
 Requesting the frontend's `/pingtrace/TraceAll` instead continues through the
-API's recursive endpoint and then its configured `ApiServiceDb` and
-`MicrosoftGraph` leaf connectors. Graph uses an in-memory simulation in this
-sample; it does not contact Microsoft services.
+API's recursive endpoint and then its configured `ActiveDirectory`,
+`ApiServiceDb`, and `MicrosoftGraph` leaf connectors in name order. AD and Graph
+use in-memory simulations in this sample; SQL Server remains a real dependency.
 
 Aspire service discovery resolves the service address. It is independent
 of the PingTrace destination discovery capability excluded from version 1.

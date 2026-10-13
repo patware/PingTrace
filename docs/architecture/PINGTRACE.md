@@ -308,7 +308,8 @@ The Entity Framework adapter is a leaf. TraceAll invokes its existing
 SQL Server diagnostic query.
 
 In the Aspire sample, requesting the frontend's `/pingtrace/TraceAll`
-reaches the API service and then its `ApiServiceDb` destination.
+reaches the API service and then its `ActiveDirectory`, `ApiServiceDb`, and
+`MicrosoftGraph` destinations. AD and Graph are simulated in the sample.
 
 Named destination Trace retains its narrower behavior:
 `/pingtrace/Trace?destination=WeatherApiClient` requests the API's local
@@ -539,7 +540,8 @@ With the sample running, use the frontend address shown by Aspire.
 5. Request `/pingtrace/Trace` directly from the API and compare its
    local observations.
 6. Request `/pingtrace/TraceAll` from the frontend to include the API's
-   configured `ApiServiceDb` diagnostics. This requires the database to be available.
+   configured `ActiveDirectory`, `ApiServiceDb`, and `MicrosoftGraph` diagnostics.
+   AD and Graph are simulated; the database must be available for traversal to complete.
 
 Use the reported application name and machine to verify which component
 answered. Use local versus dependency elapsed times to narrow a delay
