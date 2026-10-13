@@ -144,6 +144,18 @@ establish access to Teams resources. See the
 [Microsoft Graph adapter guide](src/PingTrace.Adapter.MicrosoftGraph/README.md)
 for registration, identity semantics, and test boundaries.
 
+## Add an Active Directory dependency
+
+Reference `PingTrace.Adapter.ActiveDirectory` and register a directory reader.
+`AddActiveDirectoryDestination<TReader>("ActiveDirectory", @"CONTOSO\application-account")`
+adds the destination inside the PingTrace registration callback. The included
+LDAP reader binds and reads RootDSE and the domain object through an
+application-configured connection.
+
+See the [Active Directory adapter guide](src/PingTrace.Adapter.ActiveDirectory/README.md)
+for registration, result fields, connection ownership, and the synchronous LDAP
+cancellation limitation. The sample uses a simulated reader with the same connector.
+
 ## Trace all registered dependencies
 
 Request the application's:
@@ -161,6 +173,7 @@ For the Aspire sample, calling the frontend returns results for:
 ```text
 AspireAppSample.Web
 AspireAppSample.ApiService
+ActiveDirectory
 ApiServiceDb
 MicrosoftGraph
 ```
@@ -208,6 +221,10 @@ Graph SDK and adapter. It requires no Microsoft account or tenant. Open the
 API service's `/pingtrace/Trace?destination=MicrosoftGraph` to exercise it.
 See the [simulation walkthrough](docs/development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination)
 for success, failure, and delay scenarios.
+
+The API's `/pingtrace/Trace?destination=ActiveDirectory` exercises a simulated
+directory reader without a domain controller. See the
+[AD simulation walkthrough](docs/development/GETTING-STARTED.md#exercise-the-simulated-active-directory-destination).
 
 ## Diagnose deployments
 
@@ -273,6 +290,7 @@ notifications, and recovery actions.
 | `PingTrace.Adapter.HttpClient` | Invocation of remote HTTP Trace endpoints |
 | `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through a registered DbContext |
 | `PingTrace.Adapter.MicrosoftGraph` | Organization diagnostics through a registered GraphServiceClient |
+| `PingTrace.Adapter.ActiveDirectory` | Domain diagnostics through a registered directory reader |
 
 Registration belongs to Runtime so non-HTTP hosts can use it. HTTP routing
 belongs to AspNetCore. Outgoing communication belongs to adapters.
@@ -296,7 +314,7 @@ is a future API improvement.
 
 The current implementation supports Ping, local Trace, named destination Trace,
 recursive TraceAll, HTTP dependencies, SQL Server diagnostics through EF Core,
-and Microsoft Graph organization diagnostics.
+Microsoft Graph organization diagnostics, and Active Directory domain diagnostics.
 
 Version 1 excludes destination discovery.
 

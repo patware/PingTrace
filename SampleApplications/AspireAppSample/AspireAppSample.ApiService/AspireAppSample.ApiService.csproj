@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\PingTrace.Adapter.ActiveDirectory\PingTrace.Adapter.ActiveDirectory.csproj" />
     <ProjectReference Include="..\..\..\src\PingTrace.Adapter.EntityFramework\PingTrace.Adapter.EntityFramework.csproj" />
     <ProjectReference Include="..\..\..\src\PingTrace.AspNetCore\PingTrace.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\src\PingTrace.Runtime\PingTrace.Runtime.csproj" />

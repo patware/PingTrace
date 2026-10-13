@@ -205,15 +205,20 @@ The outgoing request does not contain
 configuration.
 
 The API's local Trace does not invoke its own dependencies. Its configured
-database and Graph connectors are therefore not invoked by this named frontend request.
+database, Graph, and AD connectors are therefore not invoked by this named frontend request.
 Request `/pingtrace/TraceAll` from the frontend to continue through the API
-to its `ApiServiceDb` and `MicrosoftGraph` diagnostics instead.
+to its `ActiveDirectory`, `ApiServiceDb`, and `MicrosoftGraph` diagnostics instead.
 
 The sample's Graph client uses a terminal in-memory HTTP handler and anonymous
 authentication, so Graph tracing requires no tenant and opens no network
 connection. It is not a separate Aspire resource. See the
 [simulation walkthrough](../development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination)
 for configuration and verification boundaries.
+
+The sample's AD destination substitutes a directory reader and creates no LDAP
+connection. It also has no separate Aspire resource. See the
+[AD walkthrough](../development/GETTING-STARTED.md#exercise-the-simulated-active-directory-destination)
+for its scenarios and the distinction between connector and LDAP verification.
 
 ## What a successful request establishes
 
