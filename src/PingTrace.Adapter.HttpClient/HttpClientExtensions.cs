@@ -39,7 +39,9 @@ public static class HttpClientExtensions
     /// <see langword="null"/>.
     /// </exception>
     /// <exception cref="ArgumentException">
-    /// The destination name or trace path is empty, or the path is absolute.
+    /// The destination name or either trace path is empty or whitespace,
+    /// or a trace path contains a backslash, begins with two forward slashes,
+    /// or specifies an absolute URI.
     /// </exception>
     /// <remarks>
     /// Each registration receives a separate named HTTP client, allowing
@@ -84,9 +86,14 @@ public static class HttpClientExtensions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path, parameterName);
 
+        // A single leading slash is a supported HTTP path rooted at the
+        // configured server. On Unix, UriKind.Absolute can instead classify
+        // it as a file URI, so exclude that form from the absolute-URI check.
+        bool isRootRelativePath = path.StartsWith("/", StringComparison.Ordinal);
+
         if (path.StartsWith("//", StringComparison.Ordinal) ||
             path.Contains('\\') ||
-            Uri.TryCreate(path, UriKind.Absolute, out _))
+            (!isRootRelativePath && Uri.TryCreate(path, UriKind.Absolute, out _)))
         {
             throw new ArgumentException(
                 "The trace path must be relative to the configured server.",
