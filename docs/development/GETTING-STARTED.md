@@ -31,6 +31,12 @@ To run the Aspire sample, also provide:
   to run the sample's Redis resource.
 - An environment capable of running the Aspire AppHost.
 - A trusted development certificate when using the HTTPS launch profile.
+- The API's `ConnectionStrings:ApiService` setting. Development configuration
+  supplies a SQL Server LocalDB connection string; use an accessible SQL Server
+  database to exercise database tracing. The AppHost does not provision it.
+
+The Graph destination is simulated and needs no Microsoft account, tenant,
+credentials, or Microsoft network access. Other sample prerequisites still apply.
 
 DocFX is needed only when generating the documentation site.
 
@@ -71,13 +77,14 @@ foreach ($project in $libraryProjects) {
 
 `dotnet build` restores dependencies unless instructed otherwise.
 
-This builds the five current libraries:
+This builds the six current libraries:
 
 - `PingTrace.Core`
 - `PingTrace.Runtime`
 - `PingTrace.AspNetCore`
 - `PingTrace.Adapter.HttpClient`
 - `PingTrace.Adapter.EntityFramework`
+- `PingTrace.Adapter.MicrosoftGraph`
 
 A running container runtime is not required for this workflow.
 
@@ -186,6 +193,72 @@ alone does not automatically reproduce the AppHost-provided configuration.
 
 See [Distributed hosting](../architecture/DISTRIBUTED-HOSTING.md) for the
 registration and communication details.
+
+### Exercise the simulated Microsoft Graph destination
+
+Open the **apiservice** resource endpoint from the Aspire dashboard and request:
+
+```text
+/pingtrace/Trace?destination=MicrosoftGraph
+```
+
+Expect an array containing the API's local result followed by a Graph result:
+
+- `Name`: `MicrosoftGraph`
+- `MachineName`: `graph.simulated`
+- `Identity`: `SIMULATED; tenant:sample-tenant; app:sample-app`
+- `Payload`: a JSON-encoded string containing the simulated tenant ID,
+  `Contoso — simulated organization`, and `contoso.example`.
+
+The request uses the real Graph adapter and SDK. The API's
+`Services/Simulator/SimulatedGraphHttpMessageHandler.cs` supplies the response
+without opening a network connection, and anonymous authentication avoids token
+acquisition. The hostname is a diagnostic label, not an endpoint to open in a
+browser. The simulation is registered unconditionally in the current sample;
+it is not a fallback after a real connection fails.
+
+In `AspireAppSample.ApiService/appsettings.Development.json`, edit:
+
+```json
+"GraphSimulation": {
+  "Scenario": "Success",
+  "DelayMilliseconds": 100
+}
+```
+
+This is a section of the existing JSON object; preserve the other settings.
+The handler reads configuration on each request. Restart the API if a change
+has not been reloaded or inspect higher-priority configuration overrides.
+
+| Scenario | Simulated behavior |
+| --- | --- |
+| `Success` | One organization with ID, display name, and verified domain |
+| `Unauthorized` | Graph-shaped HTTP 401 error |
+| `Forbidden` | Graph-shaped HTTP 403 error |
+| `Unavailable` | Graph-shaped HTTP 503 error |
+| `Empty` | Successful HTTP response with no organizations; adapter validation fails |
+| `Malformed` | Successful HTTP response with invalid JSON; deserialization fails |
+
+Scenario names are case-insensitive. Unknown names and negative delays fail
+explicitly. Delay is applied per handler invocation and observes cancellation.
+The named HTTP client inherits the sample's standard resilience settings, so
+retryable failures can invoke the handler repeatedly; measured duration need
+not equal the configured delay. Resilience timeouts can also end long delays.
+
+The current endpoint propagates dependency exceptions to host error handling.
+A simulated Graph 401 or 403 normally results in a PingTrace HTTP 500, not a
+matching HTTP status. Inspect API logs for the underlying Graph error.
+
+Ping and local Trace do not invoke Graph. `/pingtrace/TraceAll` invokes both
+`ApiServiceDb` and `MicrosoftGraph`, and stops on a dependency failure. Use the
+destination-specific request above to exercise Graph without querying SQL
+Server; the API still requires its connection-string setting at startup.
+
+The simulation validates registration, SDK response handling, adapter mapping,
+and the HTTP endpoint path. It does not validate real authentication,
+permissions, DNS, TLS, or Microsoft service behavior, and it does not create a
+separate Aspire resource. Consumers replace the sample's client registration
+with their authenticated Graph client while retaining the same adapter.
 
 ## Preview the documentation
 

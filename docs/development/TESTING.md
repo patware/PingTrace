@@ -14,6 +14,7 @@ Library tests live in projects corresponding to the libraries they exercise:
 - `PingTrace.Adapter.HttpClient.Tests`
 - `PingTrace.AspNetCore.Tests`
 - `PingTrace.Adapter.EntityFramework.Tests`
+- `PingTrace.Adapter.MicrosoftGraph.Tests`
 
 The adapter-to-endpoint round-trip test currently lives in
 `PingTrace.AspNetCore.Tests`.
@@ -149,6 +150,15 @@ A command interceptor substitutes readers or failures before the SQL
 Server-specific command executes. The substituted reader must match EF's
 generated projection order. These tests do not validate SQL Server syntax,
 connectivity, authentication, or permissions.
+
+Graph adapter tests keep the real connector and Graph SDK while substituting
+the HTTP transport. Anonymous authentication avoids token acquisition. This
+checks the SDK/adapter boundary without a tenant; it does not validate live
+authentication or permissions. Keep simulation code in tests or sample hosts,
+and use the application's authenticated client in production.
+
+See the [sample walkthrough](GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination)
+for interactive success, error, and delay scenarios.
 
 ## Make asynchronous tests deterministic
 

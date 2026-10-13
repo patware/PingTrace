@@ -92,9 +92,13 @@ The current libraries target .NET 10.
 | `PingTrace.AspNetCore` | HTTP endpoints backed by an `IPingTrace` implementation. |
 | `PingTrace.Adapter.HttpClient` | Connectors that invoke remote HTTP Trace endpoints. |
 | `PingTrace.Adapter.EntityFramework` | SQL Server diagnostics through a registered DbContext. |
+| `PingTrace.Adapter.MicrosoftGraph` | Organization diagnostics through a registered GraphServiceClient. |
 
 Applications supply their destination addresses, authentication requirements,
 and authorization policies.
+
+The Aspire sample includes a simulated Graph destination that requires no
+Microsoft tenant. See the [simulation walkthrough](development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination).
 
 ## Find your next step
 

@@ -11,6 +11,7 @@ The repository's `global.json` selects the test runner.
 | `PingTrace.Adapter.HttpClient.Tests` | Named clients, URI construction, recursive request serialization, response parsing, HTTP failures, and cancellation |
 | `PingTrace.AspNetCore.Tests` | Routing, response formats, invalid TraceAll POST validation, host error handling, and named-Trace adapter-to-endpoint compatibility |
 | `PingTrace.Adapter.EntityFramework.Tests` | Database result mapping, query failures, cancellation, and deferred context resolution |
+| `PingTrace.Adapter.MicrosoftGraph.Tests` | Organization request and result mapping, Graph errors, invalid responses, cancellation, deferred resolution, and client ownership |
 
 The adapter-to-endpoint round-trip test currently belongs to
 `PingTrace.AspNetCore.Tests`. There is no separate
@@ -62,6 +63,16 @@ A command interceptor substitutes readers or failures before the SQL
 Server-specific command executes. The substituted reader must match EF's
 generated projection order. These tests do not validate SQL Server syntax,
 connectivity, authentication, or permissions.
+
+Graph adapter tests use the real SDK and connector with an in-memory HTTP
+handler and anonymous authentication. They require no tenant or credentials
+and do not perform token acquisition or network calls. They validate simulated
+response handling, not live authentication, permissions, or connectivity.
+
+For interactive testing, the Aspire sample has its own configurable Graph
+handler. See the [simulation walkthrough](../docs/development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination).
+The sample's factory-created client also inherits its HTTP resilience settings;
+the isolated test transport does not reproduce that entire middleware pipeline.
 
 ## Conventions
 
