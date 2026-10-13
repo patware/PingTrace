@@ -10,6 +10,29 @@ A lightweight Ping confirms that an application endpoint responds.
 A Trace reports the application name, machine, runtime identity, timing,
 and a diagnostic payload.
 
+## Install
+
+PingTrace 0.1.0 targets .NET 10.
+
+For an ASP.NET Core application:
+
+```shell
+dotnet add package Patware.PingTrace.Runtime --version 0.1.0
+dotnet add package Patware.PingTrace.AspNetCore --version 0.1.0
+```
+
+To trace another PingTrace application over HTTP:
+
+```shell
+dotnet add package Patware.PingTrace.Adapter.HttpClient --version 0.1.0
+```
+
+NuGet package IDs use the `Patware.PingTrace` prefix.
+C# namespaces remain `PingTrace.*`.
+
+The 0.x series is under active development. Review release notes for
+compatibility changes before upgrading.
+
 ## Start with two calls
 
 In an ASP.NET Core application referencing `PingTrace.Runtime` and

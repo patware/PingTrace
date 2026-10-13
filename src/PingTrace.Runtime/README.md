@@ -11,6 +11,14 @@ through registered connectors.
 The library targets .NET 10. It does not require ASP.NET Core or expose
 endpoints by itself.
 
+## Install
+
+```shell
+dotnet add package Patware.PingTrace.Runtime --version 0.1.0
+```
+
+Targets .NET 10. C# namespaces remain `PingTrace.Runtime`.
+
 ## Register PingTrace
 
 For an application without dependencies:

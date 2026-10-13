@@ -91,7 +91,7 @@ dotnet test --project tests/PingTrace.Adapter.MicrosoftGraph.Tests/PingTrace.Ada
 ```
 
 The Aspire API sample uses a separate sample-only handler with configurable
-responses. Follow the [sample simulation walkthrough](../../docs/development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination).
+responses. Follow the [sample simulation walkthrough](https://github.com/patware/Patware.PingTrace/blob/main/docs/development/GETTING-STARTED.md#exercise-the-simulated-microsoft-graph-destination).
 
 These simulations do not validate real authentication, permissions, DNS, TLS,
 or Microsoft service behavior. Live integration verification requires an

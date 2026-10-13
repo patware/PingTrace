@@ -1,0 +1,415 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release; must match VERSION"
+        required: true
+        type: string
+      publish:
+        description: "Publish after preparation and environment approval"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Never interrupt an active publication with another release.
+concurrency:
+  group: pingtrace-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  prepare:
+    name: Prepare release candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    outputs:
+      artifact-name: ${{ steps.prepare.outputs.artifact-name }}
+
+    steps:
+      - name: Require main
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/main') {
+              throw 'Run this workflow from main after merging the release PR.'
+          }
+
+      - name: Checkout the selected commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Check requested version
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+
+          if ($version -cne $env:REQUESTED_VERSION) {
+              throw "Requested version does not match VERSION ($version)."
+          }
+
+          # This first workflow supports stable releases.
+          if ($version -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
+              throw 'This workflow currently supports stable MAJOR.MINOR.PATCH versions.'
+          }
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+
+
+      - name: Prepare and validate
+        id: prepare
+        run: |
+          $release = ./eng/Prepare-Release.ps1
+          $manifest = Get-Content "$release/manifest.json" -Raw |
+              ConvertFrom-Json
+
+          if ($manifest.commit -ne $env:GITHUB_SHA) {
+              throw 'The candidate commit does not match this workflow run.'
+          }
+
+          $artifactName = "release-candidate-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+
+          "directory=$release" >> $env:GITHUB_OUTPUT
+          "artifact-name=$artifactName" >> $env:GITHUB_OUTPUT
+
+          @"
+          ## Release candidate
+
+          - Version: $($manifest.version)
+          - Commit: $($manifest.commit)
+          - Packages: $($manifest.validation.packageCount)
+          - Symbol packages: $($manifest.validation.symbolCount)
+          - Library tests, package checks, and consumer smoke test passed.
+
+          Download **$artifactName** from this run's artifacts to inspect
+          the packages, release notes, and manifest before approving publication.
+          "@ >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Save the release candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.prepare.outputs.artifact-name }}
+          path: ${{ steps.prepare.outputs.directory }}
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish approved candidate
+    needs: prepare
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # This is the approval gate you configured.
+    environment:
+      name: release
+
+    permissions:
+      contents: write
+      id-token: write
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REQUESTED_VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout the same commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Download the prepared candidate
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.prepare.outputs.artifact-name }}
+          path: artifacts/approved-release
+
+      - name: Verify candidate identity and checksums
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = (Resolve-Path 'artifacts/approved-release').Path
+          $manifest = Get-Content "$root/manifest.json" -Raw |
+              ConvertFrom-Json
+
+          if ($manifest.schemaVersion -ne 1 -or
+              $manifest.version -cne $env:REQUESTED_VERSION -or
+              $manifest.commit -ne $env:GITHUB_SHA -or
+              $manifest.tag -cne "v$env:REQUESTED_VERSION") {
+              throw 'Release manifest identity mismatch.'
+          }
+
+          foreach ($check in @(
+              'libraryTests',
+              'packageChecks',
+              'consumerSmoke'
+          )) {
+              if ($manifest.validation.$check -ne 'passed') {
+                  throw "Release validation did not pass: $check"
+              }
+          }
+
+          $files = @($manifest.files)
+
+          if ($files.Count -ne 14 -or
+              @($files.path | Sort-Object -Unique).Count -ne 14) {
+              throw 'Expected 14 unique package and symbol files.'
+          }
+
+          $versionPattern = [regex]::Escape($manifest.version)
+
+          foreach ($file in $files) {
+              if ($file.path -notmatch (
+                  '^packages/Patware\.PingTrace\.[A-Za-z0-9.]+\.' +
+                  $versionPattern +
+                  '\.(nupkg|snupkg)$'
+              )) {
+                  throw "Unexpected manifest path: $($file.path)"
+              }
+
+              $path = Join-Path $root $file.path
+              $item = Get-Item -LiteralPath $path
+              $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+
+              if ($item.Length -ne $file.bytes -or $hash -ne $file.sha256) {
+                  throw "Artifact verification failed: $($file.path)"
+              }
+          }
+
+          if (@($files | Where-Object path -Like '*.nupkg').Count -ne 7 -or
+              @($files | Where-Object path -Like '*.snupkg').Count -ne 7) {
+              throw 'Expected seven packages and seven symbol packages.'
+          }
+
+          if ($manifest.releaseNotes.path -cne 'release-notes.md') {
+              throw 'Unexpected release notes path.'
+          }
+
+          $notesHash = (
+              Get-FileHash "$root/release-notes.md" -Algorithm SHA256
+          ).Hash
+
+          if ($notesHash -ne $manifest.releaseNotes.sha256) {
+              throw 'Release notes checksum mismatch.'
+          }
+
+      - name: Check that this version has not been released
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:REQUESTED_VERSION
+          $tag = "v$version"
+
+          git show-ref --verify --quiet "refs/tags/$tag"
+          $tagResult = $LASTEXITCODE
+
+          if ($tagResult -eq 0) {
+              throw "Tag $tag already exists. Stop and inspect the previous release."
+          }
+
+          if ($tagResult -ne 1) {
+              throw 'Unable to check existing tags.'
+          }
+
+          # Also detect an existing draft release.
+          $releases = & gh api --paginate `
+              "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" `
+              --jq '.[].tag_name'
+
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Unable to check existing GitHub releases.'
+          }
+
+          if (@($releases) -contains $tag) {
+              throw "A GitHub release for $tag already exists."
+          }
+
+          $packages = Get-ChildItem `
+              'artifacts/approved-release/packages' -Filter '*.nupkg'
+
+          foreach ($package in $packages) {
+              $suffix = ".$version.nupkg"
+              $id = $package.Name.Substring(
+                  0,
+                  $package.Name.Length - $suffix.Length
+              ).ToLowerInvariant()
+
+              $url = "https://api.nuget.org/v3-flatcontainer/$id/$version/$id.$version.nupkg"
+              $exists = $false
+
+              try {
+                  $null = Invoke-WebRequest $url -Method Head -TimeoutSec 30
+                  $exists = $true
+              }
+              catch {
+                  $response = $_.Exception.Response
+
+                  if ($null -eq $response -or
+                      [int]$response.StatusCode -ne 404) {
+                      throw
+                  }
+              }
+
+              if ($exists) {
+                  throw "$id $version is already available on NuGet.org."
+              }
+          }
+
+      - name: Authenticate with NuGet
+        uses: NuGet/login@v1
+        id: nuget
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Create a draft GitHub release with the candidate files
+        run: |
+          $root = (Resolve-Path 'artifacts/approved-release').Path
+          $manifest = Get-Content "$root/manifest.json" -Raw |
+              ConvertFrom-Json
+
+          $assets = @(
+              foreach ($file in $manifest.files) {
+                  Join-Path $root $file.path
+              }
+
+              Join-Path $root 'manifest.json'
+              Join-Path $root 'release-notes.md'
+          )
+
+          gh release create $manifest.tag @assets `
+              --repo $env:GITHUB_REPOSITORY `
+              --target $manifest.commit `
+              --title "Patware.PingTrace $($manifest.version)" `
+              --notes-file "$root/release-notes.md" `
+              --draft
+
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Could not create the draft GitHub release.'
+          }
+
+      - name: Publish packages and symbols to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: |
+          $root = (Resolve-Path 'artifacts/approved-release').Path
+          $manifest = Get-Content "$root/manifest.json" -Raw |
+              ConvertFrom-Json
+
+          # Dependency order reduces the period in which a newly uploaded
+          # package could reference another package not yet uploaded.
+          $libraries = @(
+              'Core'
+              'Runtime'
+              'AspNetCore'
+              'Adapter.HttpClient'
+              'Adapter.EntityFramework'
+              'Adapter.MicrosoftGraph'
+              'Adapter.ActiveDirectory'
+          )
+
+          foreach ($library in $libraries) {
+              $name = "Patware.PingTrace.$library.$($manifest.version).nupkg"
+              $package = Join-Path $root "packages/$name"
+
+              # The matching .snupkg is pushed automatically.
+              dotnet nuget push $package `
+                  --api-key $env:NUGET_API_KEY `
+                  --source https://api.nuget.org/v3/index.json
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Publication failed for $name. Preserve this candidate for recovery."
+              }
+          }
+
+      - name: Wait for NuGet package availability
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content `
+              'artifacts/approved-release/manifest.json' -Raw |
+              ConvertFrom-Json
+
+          $version = $manifest.version
+          $pending = @(
+              foreach ($file in $manifest.files) {
+                  if ($file.path.EndsWith('.nupkg')) {
+                      $name = [IO.Path]::GetFileName($file.path)
+                      $suffix = ".$version.nupkg"
+
+                      $name.Substring(
+                          0,
+                          $name.Length - $suffix.Length
+                      ).ToLowerInvariant()
+                  }
+              }
+          )
+
+          $deadline = [DateTimeOffset]::UtcNow.AddMinutes(10)
+
+          while ($pending.Count -gt 0) {
+              $remaining = @(
+                  foreach ($id in $pending) {
+                      $url = "https://api.nuget.org/v3-flatcontainer/$id/$version/$id.$version.nupkg"
+
+                      try {
+                          $null = Invoke-WebRequest $url `
+                              -Method Head -TimeoutSec 20
+                      }
+                      catch {
+                          $response = $_.Exception.Response
+
+                          if ($null -eq $response -or
+                              [int]$response.StatusCode -ne 404) {
+                              throw
+                          }
+
+                          $id
+                      }
+                  }
+              )
+
+              $pending = $remaining
+
+              if ($pending.Count -eq 0) {
+                  break
+              }
+
+              if ([DateTimeOffset]::UtcNow -ge $deadline) {
+                  throw "NuGet availability timed out. Still waiting for: $($pending -join ', ')"
+              }
+
+              Write-Host "Waiting for NuGet indexing: $($pending -join ', ')"
+              Start-Sleep -Seconds 15
+          }
+
+      - name: Publish the GitHub release
+        run: |
+          $tag = "v$env:REQUESTED_VERSION"
+
+          gh release edit $tag `
+              --repo $env:GITHUB_REPOSITORY `
+              --draft=false
+
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Packages were uploaded, but the GitHub release could not be finalized.'
+          }
+
+          "## Published Patware.PingTrace $env:REQUESTED_VERSION" >> $env:GITHUB_STEP_SUMMARY
+          "https://github.com/$env:GITHUB_REPOSITORY/releases/tag/$tag" >> $env:GITHUB_STEP_SUMMARY

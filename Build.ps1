@@ -34,9 +34,13 @@ if (Test-Path -LiteralPath $OutputDirectory) {
 }
 
 $libraries = @(
-    'PingTrace'
     'PingTrace.Core'
+    'PingTrace.Runtime'
     'PingTrace.AspNetCore'
+    'PingTrace.Adapter.HttpClient'
+    'PingTrace.Adapter.EntityFramework'
+    'PingTrace.Adapter.MicrosoftGraph'
+    'PingTrace.Adapter.ActiveDirectory'
 )
 
 $testProjects = @(
