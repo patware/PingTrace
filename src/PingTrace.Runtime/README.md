@@ -188,8 +188,9 @@ connectors sharing a scoped DbContext.
 The default depth is eight connector hops. Validation accepts at most sixteen
 hops including the ancestor path. Zero depth succeeds only when the application
 has no registered destinations. A repeated node or exhausted depth throws
-`InvalidOperationException`; dependency failures propagate and stop traversal.
-No partial result collection is returned.
+`InvalidOperationException`; exceptions thrown by connectors propagate and stop
+traversal without returning the accumulated results. Diagnostic results returned
+by connectors are included, and traversal continues while time remains.
 
 Each invocation uses the earlier of the incoming deadline and thirty seconds
 after execution begins. The runtime forwards that effective deadline and links
@@ -233,11 +234,12 @@ For destination requests:
 | Null destination | Throws `ArgumentNullException`. |
 | Empty or whitespace destination | Throws `ArgumentException`. |
 | Unknown destination | Throws `KeyNotFoundException`. |
-| Connector failure | Propagates the failure to the caller. |
+| Connector throws an exception | Propagates the exception to the caller. |
+| Connector returns diagnostic results | Includes those results and continues traversal while its deadline permits. |
 | Cancellation | Propagates cancellation to the caller. |
 
-A connector failure does not produce a successful response containing partial
-results.
+If a connector throws an exception, the runtime propagates it without
+returning the accumulated results.
 
 The runtime does not translate exceptions into HTTP status codes. That
 responsibility belongs to the hosting integration.

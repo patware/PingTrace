@@ -302,7 +302,8 @@ The remote application then traces its own registered destinations.
 
 The response must be a nonempty JSON array of non-null trace results with
 nonblank names. An unavailable recursive endpoint remains a failure; the
-adapter does not fall back to local Trace.
+adapter does not fall back to local Trace. An HttpClient timeout returns a diagnostic
+entry stating that the destination did not respond before the HTTP timeout.
 
 The Entity Framework adapter is a leaf. TraceAll invokes its existing
 SQL Server diagnostic query.
@@ -399,12 +400,14 @@ reliably.
 
 ### Failures and cancellation
 
-Dependency failures propagate and stop the remaining traversal.
-The runtime does not return a partial result collection.
+HTTP transport failures, unsuccessful HTTP responses, and HttpClient
+timeouts produce diagnostic entries. Traversal continues to subsequent
+destinations while its deadline permits.
 
-Cycles and exhausted depth throw `InvalidOperationException`.
-Cancellation and expired deadlines produce cancellation exceptions in
-the runtime.
+Exceptions propagated by connectors stop traversal without returning
+the accumulated results. Cycles and exhausted depth throw
+InvalidOperationException. Caller cancellation and expired traversal
+deadlines produce cancellation exceptions.
 
 All Trace endpoints pass `HttpContext.RequestAborted` to the implementation.
 The runtime links that token to its execution deadline.
@@ -466,24 +469,19 @@ The catch surrounds destination execution, so a custom connector throwing
 
 ### Dependency failure
 
-Other failures propagate to the host's exception handling.
+The HTTP adapter returns diagnostic entries for transport failures,
+unsuccessful HTTP responses, and HttpClient timeouts.
 
-Examples include:
+Malformed JSON, invalid remote trace results, and a missing HTTP client
+base address still produce exceptions that propagate to the host's
+exception handling.
 
-- An unavailable remote service.
-- An unsuccessful remote HTTP status.
-- Malformed JSON.
-- A null or unnamed remote trace result.
-- A missing HTTP client base address.
+A remote HTTP 404 produces a diagnostic entry containing that status.
+It does not mean the frontend's destination alias is unknown, and the
+remote status is not copied onto the frontend response.
 
-The library does not define a uniform HTTP error body or copy remote status
-codes onto the frontend response.
-
-For example, a remote HTTP 404 is an HTTP client failure. It is not treated
-as proof that the frontend's destination alias is unknown.
-
-If a connector fails, the default runtime does not return a partial
-collection containing the local result.
+When a connector throws an exception, the default runtime stops
+traversal without returning the accumulated results.
 
 ## Cancellation
 

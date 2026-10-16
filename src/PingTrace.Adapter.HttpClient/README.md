@@ -266,16 +266,20 @@ local Trace that could silently omit descendants.
 | Condition | Behavior |
 | --- | --- |
 | `BaseAddress` is missing | Throws `InvalidOperationException` when tracing. |
-| Remote HTTP status is unsuccessful | The HTTP operation fails and its exception propagates. |
 | Response JSON is invalid or incompatible | Deserialization fails and its exception propagates. |
 | Deserialized result is null or has a blank name | Throws `InvalidOperationException`. |
 | Recursive result array is null, empty, or contains a null or unnamed entry | Throws `InvalidOperationException`. |
-| Network failure or timeout | The operation fails and its exception propagates. |
+| Remote HTTP status is unsuccessful | Returns a diagnostic entry containing the HTTP status. |
+| HTTP transport failure | Returns a diagnostic entry identifying the configured destination. |
+| HttpClient timeout | Returns a diagnostic entry describing the timeout. |
+| Caller cancellation or traversal deadline exhaustion | Cancellation propagates and stops the operation. |
 
 The connector checks cancellation before creating the client and passes the
 token to the HTTP and JSON operation.
 
-It does not replace failures with successful-looking trace results.
+Diagnostic failures use the same TraceResult shape as successful traces,
+with the failure described in Payload. A completed request does not imply
+that every destination is healthy.
 
 A client is obtained from `IHttpClientFactory` for each trace operation and
 disposed when that operation finishes. Handler lifetime management remains
