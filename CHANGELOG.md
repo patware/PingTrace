@@ -9,7 +9,21 @@ published releases are identified by package and release date below.
 
 ### Added
 
-## 0.1.0 - Pending publication
+## 0.2.0 - 2026.10.15
+
+### Changed
+
+- HTTP destination transport failures, client timeouts, and unsuccessful
+  HTTP responses now produce diagnostic results instead of aborting tracing.
+  TraceAll continues visiting subsequent destinations while its deadline permits.
+- Consumers must inspect diagnostic results rather than treating the absence
+  of an exception as evidence that every destination responded successfully.
+- Caller cancellation and overall traversal deadline exhaustion still
+  stop execution.
+
+### Added
+
+## 0.1.0 - 2026.10.13
 
 ### Added
 

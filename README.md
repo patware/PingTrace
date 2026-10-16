@@ -202,8 +202,13 @@ MicrosoftGraph
 ```
 
 The default traversal permits eight connector hops and uses a thirty-second
-deadline. Cycles, exhausted depth, dependency failures, and cancellation
-stop traversal rather than returning partial success.
+deadline. The HTTP adapter returns diagnostic entries for transport failures,
+unsuccessful HTTP responses, and HttpClient timeouts. TraceAll continues
+visiting subsequent destinations while its deadline permits.
+
+Exceptions propagated by connectors, detected cycles, exhausted depth,
+caller cancellation, and overall deadline exhaustion stop traversal
+without returning the accumulated results.
 
 Shared dependencies are visited through each path. Results remain a flat
 array, and parent durations include descendant execution.

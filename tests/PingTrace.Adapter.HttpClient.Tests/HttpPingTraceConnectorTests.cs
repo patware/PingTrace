@@ -146,13 +146,10 @@ public sealed class HttpPingTraceConnectorTests
     }
 
     /// <summary>
-    /// Verifies that unsuccessful responses remain HTTP failures.
+    /// Verifies that HTTP error responses become diagnostic results.
     /// </summary>
     /// <param name="statusCode">The remote failure status.</param>
     /// <param name="recursive">Whether to invoke recursive tracing.</param>
-    /// <remarks>
-    /// Both transport implementations must preserve the remote status code.
-    /// </remarks>
     [TestMethod]
     [DataRow(401, false)]
     [DataRow(401, true)]
@@ -160,7 +157,7 @@ public sealed class HttpPingTraceConnectorTests
     [DataRow(404, true)]
     [DataRow(503, false)]
     [DataRow(503, true)]
-    public async Task UnsuccessfulResponse_ThrowsHttpRequestException(
+    public async Task UnsuccessfulResponse_ReturnsDiagnosticResult(
         int statusCode,
         bool recursive)
     {
@@ -173,14 +170,196 @@ public sealed class HttpPingTraceConnectorTests
         IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
 
         // Act
-        Func<Task> act = () => recursive
-            ? sut.TraceAllAsync(cancellationToken: TestContext.CancellationToken)
-            : sut.TraceAsync("ApiService", TestContext.CancellationToken);
+        IReadOnlyList<TraceResult> results = recursive
+            ? await sut.TraceAllAsync(
+                cancellationToken: TestContext.CancellationToken)
+            : await sut.TraceAsync(
+                "ApiService",
+                TestContext.CancellationToken);
 
         // Assert
-        var assertion = await act.Should().ThrowAsync<HttpRequestException>();
+        AssertFailureResult(results, $"Destination returned HTTP {statusCode} ({(HttpStatusCode)statusCode}).");
+    }
 
-        assertion.Which.StatusCode.Should().Be((HttpStatusCode)statusCode);
+    /// <summary>
+    /// Verifies that transport failures become diagnostic results without
+    /// exposing the original exception message.
+    /// </summary>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task TransportFailure_ReturnsDiagnosticResult(bool recursive)
+    {
+        // Arrange
+        using ServiceProvider provider = CreateProvider(
+            (_, _) => Task.FromException<HttpResponseMessage>(
+                new HttpRequestException("Internal transport details.")));
+
+        using IServiceScope scope = provider.CreateScope();
+        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        // Act
+        IReadOnlyList<TraceResult> results = recursive
+            ? await sut.TraceAllAsync(
+                cancellationToken: TestContext.CancellationToken)
+            : await sut.TraceAsync(
+                "ApiService",
+                TestContext.CancellationToken);
+
+        // Assert
+        AssertFailureResult(
+            results,
+            "Destination not reachable: HTTP transport failed.");
+    }
+
+    /// <summary>
+    /// Verifies that HttpClient timeouts become diagnostic results.
+    /// </summary>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
+    /// <remarks>
+    /// The handler waits for cancellation. HttpClient supplies the timeout;
+    /// the test does not manufacture a timeout exception or assert an exact duration.
+    /// A separate cancellation limit prevents an indefinite test run.
+    /// </remarks>
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task ClientTimeout_ReturnsDiagnosticResult(bool recursive)
+    {
+        // Arrange
+        using CancellationTokenSource guard =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                TestContext.CancellationToken);
+
+        guard.CancelAfter(TimeSpan.FromSeconds(10));
+
+        using ServiceProvider provider = CreateProvider(
+            async (_, token) =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return JsonResponse("""{"name":"Remote"}""");
+            },
+            timeout: TimeSpan.FromMilliseconds(200));
+
+        using IServiceScope scope = provider.CreateScope();
+        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        // Act
+        IReadOnlyList<TraceResult> results = recursive
+            ? await sut.TraceAllAsync(cancellationToken: guard.Token)
+            : await sut.TraceAsync("ApiService", guard.Token);
+
+        // Assert
+        guard.IsCancellationRequested.Should().BeFalse();
+
+        AssertFailureResult(results, "Destination did not respond before the HTTP timeout.");
+    }
+
+
+    /// <summary>
+    /// Verifies that caller cancellation takes precedence over a transport failure.
+    /// </summary>
+    /// <param name="recursive">Whether to invoke recursive tracing.</param>
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task CancellationAlongsideTransportFailure_Propagates(
+        bool recursive)
+    {
+        // Arrange
+        using CancellationTokenSource cancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                TestContext.CancellationToken);
+
+        using ServiceProvider provider = CreateProvider((_, _) =>
+        {
+            cancellation.Cancel();
+
+            return Task.FromException<HttpResponseMessage>(
+                new HttpRequestException("Transport failed during cancellation."));
+        });
+
+        using IServiceScope scope = provider.CreateScope();
+        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        // Act
+        Func<Task> act = () => recursive
+            ? sut.TraceAllAsync(cancellationToken: cancellation.Token)
+            : sut.TraceAsync("ApiService", cancellation.Token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+
+    /// <summary>
+    /// Verifies that an unavailable HTTP destination does not prevent
+    /// subsequent destinations from being traced.
+    /// </summary>
+    /// <remarks>
+    /// Destination names establish traversal order. Request recording proves
+    /// that the second destination was actually invoked.
+    /// </remarks>
+    [TestMethod]
+    public async Task TraceAll_UnreachableDestination_ContinuesTraversal()
+    {
+        // Arrange
+        ServiceCollection services = new();
+        List<string> requests = [];
+
+        services.AddPingTrace(builder =>
+        {
+            builder.AddHttpDestination("A-Unavailable", client =>
+            {
+                client.BaseAddress = new Uri("https://unavailable.test/");
+            }).ConfigurePrimaryHttpMessageHandler(() =>
+                new StubHandler((request, _) =>
+                {
+                    request.Method.Should().Be(HttpMethod.Post);
+                    requests.Add("A-Unavailable");
+
+                    return Task.FromException<HttpResponseMessage>(
+                        new HttpRequestException("Connection refused."));
+                }));
+
+            builder.AddHttpDestination("B-Available", client =>
+            {
+                client.BaseAddress = new Uri("https://available.test/");
+            }).ConfigurePrimaryHttpMessageHandler(() =>
+                new StubHandler((request, _) =>
+                {
+                    request.Method.Should().Be(HttpMethod.Post);
+                    requests.Add("B-Available");
+
+                    return Task.FromResult(JsonResponse(
+                        """[{"name":"RemoteApi","payload":"healthy"}]"""));
+                }));
+        });
+
+        using ServiceProvider provider = BuildProvider(services);
+        using IServiceScope scope = provider.CreateScope();
+        IPingTrace sut = scope.ServiceProvider.GetRequiredService<IPingTrace>();
+
+        // Act
+        IReadOnlyList<TraceResult> results = await sut.TraceAllAsync(
+            cancellationToken: TestContext.CancellationToken);
+
+        // Assert
+        requests.Should().Equal("A-Unavailable", "B-Available");
+
+        results.Should().HaveCount(3);
+        results[0].FinishedAt.Should().NotBe(default);
+
+        results[1].Name.Should().Be("A-Unavailable");
+        results[1].MachineName.Should().Be("unavailable.test");
+        results[1].Identity.Should().BeEmpty();
+        results[1].Payload.Should().Be(
+            "Destination not reachable: HTTP transport failed.");
+        results[1].FinishedAt.Should().NotBe(default);
+
+        results[2].Name.Should().Be("RemoteApi");
+        results[2].Payload.Should().Be("healthy");
     }
 
     /// <summary>
@@ -462,7 +641,8 @@ public sealed class HttpPingTraceConnectorTests
     private static ServiceProvider CreateProvider(
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send,
         string tracePath = "/pingtrace/Trace",
-        string traceAllPath = "/pingtrace/TraceAll")
+        string traceAllPath = "/pingtrace/TraceAll",
+        TimeSpan? timeout = null)
     {
         ServiceCollection services = new();
 
@@ -472,8 +652,12 @@ public sealed class HttpPingTraceConnectorTests
                 "ApiService",
                 client =>
                 {
-                    client.BaseAddress =
-                        new Uri("https://remote.test/application/");
+                    client.BaseAddress = new Uri("https://remote.test/application/");
+
+                    if (timeout.HasValue)
+                    {
+                        client.Timeout = timeout.Value;
+                    }
                 },
                 tracePath,
                 traceAllPath)
@@ -498,6 +682,23 @@ public sealed class HttpPingTraceConnectorTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+    }
+
+    private static void AssertFailureResult(IReadOnlyList<TraceResult> results, string expectedPayload)
+    {
+        results.Should().HaveCount(2);
+
+        results[0].Name.Should().NotBeNullOrWhiteSpace();
+        results[0].FinishedAt.Should().NotBe(default);
+
+        TraceResult failure = results[1];
+
+        failure.Name.Should().Be("ApiService");
+        failure.MachineName.Should().Be("remote.test");
+        failure.Identity.Should().BeEmpty();
+        failure.Payload.Should().Be(expectedPayload);
+        failure.StartedAt.Should().NotBe(default);
+        failure.FinishedAt.Should().NotBe(default);
     }
 
     private sealed class StubHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler

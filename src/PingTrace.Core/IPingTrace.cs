@@ -47,8 +47,10 @@ public interface IPingTrace
     /// </returns>
     /// <remarks>
     /// Destinations execute sequentially. The local elapsed time includes
-    /// descendant execution. Failures, detected cycles, exhausted depth,
-    /// and cancellation propagate instead of producing partial success.
+    /// descendant execution. Connectors may return diagnostic results describing
+    /// dependency failures. Exceptions propagated by connectors, detected cycles,
+    /// exhausted depth, and cancellation stop traversal without returning
+    /// the accumulated results.
     /// </remarks>
     Task<IReadOnlyList<TraceResult>> TraceAllAsync(
         TraceAllRequest? request = null,
